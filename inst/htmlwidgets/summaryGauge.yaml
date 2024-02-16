@@ -1,0 +1,17 @@
+dependencies:
+  - name: d3
+    version: 7.8.5
+    src: "htmlwidgets/libs"
+    script: d3.v7.min.js
+  - name: colorbrewer
+    version: 1
+    src: "htmlwidgets/libs"
+    script: colorbrewer.js
+  - name: jquery
+    version: 2.2.4
+    src: "htmlwidgets/libs"
+    script: jquery.min.js
+  - name: helperfunctions
+    version: 0.0.1
+    src: "htmlwidgets/libs"
+    script: helperfunctions.js

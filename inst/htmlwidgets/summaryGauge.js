@@ -1,0 +1,496 @@
+HTMLWidgets.widget({
+  name: 'summaryGauge',
+  type: 'output',
+
+  factory: function (el, width, height) {
+
+    return {
+      renderValue: function (x) {
+
+        // Filter array, returning a new array with only values in keys
+        var filterKeys = function (obj, keys) {
+          var result = [];
+          keys.forEach(function (k, i) {
+            if (obj.hasOwnProperty(k))
+              result[i] = obj[k];
+          });
+
+          return result;
+        };
+
+        var targetPercent = function (min, max, value) {
+          return (value - min) / (max - min);
+        }
+
+        var calculateGaugeValues = function (data, config) {
+
+          col_length = data.length;
+
+          let value;
+          let min;
+          let max;
+
+          switch (config.settings.statistic) {
+            case 'count':
+              value = col_length;
+              min = config.min ?? 0;
+              max = config.max ?? col_length + 1;
+              break;
+            case 'sum':
+              value = d3.sum(data, d => d) ?? "NA";
+              min = config.min ?? d3.min(data, d => d) * col_length;
+              max = config.max ?? d3.max(data, d => d) * col_length;
+              break;
+            case 'mean':
+              value = d3.mean(data, d => d) ?? "NA";
+              min = config.min ?? d3.min(data, d => d);
+              max = config.max ?? d3.max(data, d => d);
+              break;
+            case 'pct_total':
+              let num_length = config.numerator.length;
+              value = data.length === 0 ? "NA" : num_length / data.length;
+              min = config.min ?? 0;
+              max = config.max ?? 1;
+              break;
+            case 'sum_pct_total':
+              let num = d3.sum(config.numerator, d => d);
+              let denom = d3.sum(data, d => d);
+              value = num / denom ?? "NA";
+              min = config.min ?? 0;
+              max = config.max ?? 1;
+              break;
+            case 'min':
+              value = d3.min(data, d => d) ?? "NA";
+              min = config.min ?? 0;
+              max = config.max ?? 1;
+              break;
+            case 'max':
+              value = d3.max(data, d => d) ?? "NA";
+              min = config.min ?? 0;
+              max = config.max ?? 1;
+              break;
+            case 'quantile':
+              value = d3.quantile(data, config.settings.quantile, d => d) ?? "NA";
+              min = d3.quantile(data, 0, d => d) ?? 0;
+              max = d3.quantile(data, 1, d => d) ?? 1;
+              break;
+          }
+
+          return [value, min, max];
+        }
+
+        var getValueFootnote = function (value, min, max, locale) {
+          console.log(locale);
+          let value_footnote = "";
+          if (value < min) {
+            switch (locale.substring(0, 2)) {
+              case "en":
+                value_footnote = "NOTE: Target value is less than the minimum value"
+                break;
+              case "fr":
+                value_footnote = "NOTE : La valeur ciblée est inférieure à la valeur minimale."
+                break;
+              default:
+                value_footnote = "NOTE: Target value is less than the minimum value"
+                break;
+            };
+          } else if (value > max) {
+            switch (locale.substring(0, 2)) {
+              case "en":
+                value_footnote = "NOTE: Target value exceeds the maximum value";
+                break;
+              case "fr":
+                value_footnote = "NOTE : La valeur ciblée est supérieure à la valeur maximale."
+                break;
+              default:
+                value_footnote = "NOTE: Target value exceeds the maximum value";
+                break;
+            };
+          }
+          return value_footnote
+        }
+
+        /**
+        * Draws a gauge, with the number in the center, and the min and max value underneath
+        * @param {String} nodeID - The id of the containing div of the chart. This div must have the class svg-wrapper
+        * @param {Array} data - An array of objects representing the data to be visualized
+        * @param {Object} config - The pie chart config object
+        */
+        var drawGauge = function (nodeID, data, config) {
+
+          let svg = d3.select(`#${nodeID}`)
+            .append("svg")
+            .attr("width", config.containerWidth)
+            .attr("height", config.containerHeight)
+            .attr("role", "img")
+            .attr("preserveAspectRatio", "xMidYMin meet")
+            .attr("viewBox", `0 0 ${config.viewbox.width}, ${config.viewbox.height}`)
+
+            .attr("aria-labelledby", `${nodeID}-title ${nodeID}-desc`);
+
+          svg.append("title")
+            .attr("id", `${nodeID}-title`)
+            .text(config.title);
+
+          svg.append("desc")
+            .attr("id", `${nodeID}-desc`)
+            .text(config.desc);
+
+          let [value, min, max] = calculateGaugeValues(data, config);
+
+          let valuePct = targetPercent(min, max, value);
+          valuePct = valuePct < 0 ? 0 : valuePct > 1 ? 1 : valuePct;
+          let valueRadian = (valuePct * Math.PI) - (Math.PI / 2);
+
+          let gaugeData = [
+            { startAngle: -Math.PI / 2, endAngle: valueRadian, fill: config.colourScale(valuePct) },
+            { startAngle: valueRadian, endAngle: Math.PI / 2, fill: "#EDEDED" },
+          ];
+
+          let svgGauge = svg.append("g")
+            .attr("transform",
+              `translate(${(config.chartWidth / 2)},${config.chartHeight / 2 + config.margin.top})`);
+
+          svgGauge.append("g")
+            .attr("class", "slice-group")
+            .selectAll(".slices")
+            .data(gaugeData)
+            .enter()
+            .append("path")
+            .attr("class", "slices")
+            .attr("d", d3.arc()
+              .outerRadius(config.outerRadius)
+              .innerRadius(config.innerRadius)
+            )
+            .style("stroke", function (d) { return d.fill })
+            .style("fill", function (d) { return d.fill });
+
+          let value_footnote = getValueFootnote(value, min, max, config.settings.locale);
+
+          switch (config.settings.number_format) {
+            case 'percent':
+              value = format_percent(value, config.settings);
+              min = format_percent(min, config.settings);
+              max = format_percent(max, config.settings);
+              break;
+            case "currency":
+              value = format_currency(value, config.settings);
+              min = format_currency(min, config.settings);
+              max = format_currency(max, config.settings);
+              break;
+            case "unit":
+              value = format_unit(value, config.settings);
+              min = format_unit(min, config.settings);
+              max = format_unit(max, config.settings);
+              break;
+            case "decimal":
+              value = format_number(value, config.settings);
+              min = format_number(min, config.settings);
+              max = format_number(max, config.settings);
+              break;
+          }
+
+          svgGauge.selectAll(".value-text")
+            .data([value]).enter()
+            .append("text")
+            .attr('class', "value-text")
+            .attr("font-size", "18px")
+            .attr("text-anchor", "middle")
+            .text(d => d)
+            .call(shrink, config.innerRadius * 2);
+
+          svgGauge.selectAll(".min-text")
+            .data([min]).enter()
+            .append("text")
+            .attr('class', "min-text")
+            .attr("font-size", "12px")
+            .attr("text-anchor", "end")
+            .attr("transform",
+              `translate(${-(gaugeConfig.innerRadius)},${config.margin.top})`)
+            .style("fill", "#777")
+            .text(d => d);
+
+          svgGauge.selectAll(".max-text")
+            .data([max]).enter()
+            .append("text")
+            .attr('class', "max-text")
+            .attr("font-size", "12px")
+            .attr("text-anchor", "start")
+            .attr("transform",
+              `translate(${(gaugeConfig.innerRadius)},${config.margin.top})`)
+            .style("fill", "#777")
+            .text(d => d);
+
+          svgGauge.selectAll(".ftn-text")
+            .data([value_footnote]).enter()
+            .append("text")
+            .attr('class', "ftn-text")
+            .attr("font-size", "9px")
+            .attr("text-anchor", "middle")
+            .attr("transform",
+              `translate(${0},${config.margin.top + 8})`)
+            .style("fill", "#777")
+            .text(d => d)
+            .call(shrink, config.viewbox.width);
+        }
+
+        /**
+         * Updates the gauge according to new data
+         * @param {String} nodeID - The id of the containing div of the chart. This div must have the class svg-wrapper
+         * @param {Array} data - An array of objects representing the data to be visualized
+         * @param {Object} config - The pie chart config object
+         */
+        var updateGauge = function (nodeID, data, config) {
+
+          let svg = d3.select(`#${nodeID}`)
+            .select("svg");
+
+          svg.select("title").text(config.title);
+          svg.select("desc").text(config.desc);
+
+
+          let [value, min, max] = calculateGaugeValues(data, config);
+          let gaugeData;
+
+          if (value !== "NA") {
+            let valuePct = targetPercent(min, max, value);
+            valuePct = valuePct < 0 ? 0 : valuePct > 1 ? 1 : valuePct;
+            let valueRadian = (valuePct * Math.PI) - (Math.PI / 2);
+
+            gaugeData = [
+              { startAngle: -Math.PI / 2, endAngle: valueRadian, fill: config.colourScale(valuePct) },
+              { startAngle: valueRadian, endAngle: Math.PI / 2, fill: "#EDEDED" },
+            ];
+          } else {
+            gaugeData = [
+              { startAngle: -Math.PI / 2, endAngle: -Math.PI / 2, fill: config.colourScale(-Infinity) },
+              { startAngle: -Math.PI / 2, endAngle: Math.PI / 2, fill: "#EDEDED" },
+            ];
+          }
+
+          let slices = svg.select(".slice-group").selectAll(".slices")
+            .data(gaugeData)
+
+          slices.exit().remove();
+
+          slices = slices.merge(slices.enter().append("path"))
+
+          slices.transition()
+            .duration(config.transDur)
+            .attr("class", "slices")
+            .attrTween("d", function (d) {
+              var interpolate = d3.interpolate(this._current, d);
+              this._current = interpolate(0);
+              return function (t) {
+                return d3.arc()
+                  .outerRadius(config.outerRadius)
+                  .innerRadius(config.innerRadius)(interpolate(t));
+              };
+            })
+            .style("stroke", function (d) { return d.fill })
+            .style("fill", function (d) { return d.fill });
+
+          let value_footnote = getValueFootnote(value, min, max, config.settings.locale);
+
+          if (value !== "NA") {
+            switch (config.settings.number_format) {
+              case 'percent':
+                value = format_percent(value, config.settings);
+                min = format_percent(min, config.settings);
+                max = format_percent(max, config.settings);
+                break;
+              case "currency":
+                value = format_currency(value, config.settings);
+                min = format_currency(min, config.settings);
+                max = format_currency(max, config.settings);
+                break;
+              case "unit":
+                value = format_unit(value, config.settings);
+                min = format_unit(min, config.settings);
+                max = format_unit(max, config.settings);
+                break;
+              case "decimal":
+                value = format_number(value, config.settings);
+                min = format_number(min, config.settings);
+                max = format_number(max, config.settings);
+                break;
+            }
+          }
+
+          svg.selectAll(".value-text")
+            .data([value])
+            .join(function (enter) {
+              return enter.append("text")
+                .attr("class", "value-text")
+                .attr("font-size", "18px")
+                .attr("text-anchor", "middle")
+                .text(d => d)
+                .call(shrink, config.innerRadius * 2);
+            },
+              function (update) {
+                return update.text(d => d)
+                  .attr("font-size", "18px")
+                  .call(shrink, config.innerRadius * 2);
+
+              })
+
+          svg.select(".min-text")
+            .data([min ?? 0])
+            .join(function (enter) {
+              return enter.append("text")
+                .attr("class", "min-text")
+                .attr("font-size", "12px")
+                .attr("text-anchor", "end")
+                .attr("transform", `translate(${-(gaugeConfig.innerRadius)},${config.margin.top})`)
+                .style("fill", "#777")
+                .text(d => d)
+            },
+              function (update) {
+                return update.text(d => d)
+              })
+
+          svg.select(".max-text")
+            .data([max ?? 1])
+            .join(function (enter) {
+              return enter.append("text")
+                .attr("class", "max-text")
+                .attr("font-size", "12px")
+                .attr("text-anchor", "start")
+                .attr("transform", `translate(${-(gaugeConfig.innerRadius)},${config.margin.top })`)
+                .style("fill", "#777")
+                .text(d => d)
+            },
+              function (update) {
+                return update.text(d => d)
+              })
+
+          svg.selectAll(".ftn-text")
+            .data([value_footnote])
+            .join(function (enter) {
+              return enter.append("text")
+                .attr("class", "ftn-text")
+                .attr("font-size", "9px")
+                .attr("text-anchor", "middle")
+                .attr("transform", `translate(${0},${config.margin.top + 8})`)
+                .style("fill", "#777")
+                .text(d => d)
+                .call(shrink, config.viewbox.width);
+            },
+              function (update) {
+                return update.text(d => d)
+                .attr("font-size", "9px")
+                .call(shrink, config.viewbox.width);
+              })
+
+        } // end updateGauge
+
+        height = Math.max(height, 120);
+        width = Math.max(width, 200);
+
+        d3.select(`#${el.id}`)
+          .attr("width", width)
+          .attr("height", height)
+
+        let gaugeConfig = new Object();
+
+        gaugeConfig.containerWidth = width;
+        gaugeConfig.containerHeight = height;
+        gaugeConfig.viewbox = { width: 200, height: 100 };
+        gaugeConfig.margin = { top: 15, right: -5, bottom: -15, left: -5 };
+        gaugeConfig.chartWidth = gaugeConfig.viewbox.width - gaugeConfig.margin.left - gaugeConfig.margin.right;
+        gaugeConfig.chartHeight = gaugeConfig.viewbox.height - gaugeConfig.margin.top - gaugeConfig.margin.bottom;
+        gaugeConfig.outerRadius = Math.min(gaugeConfig.chartWidth, gaugeConfig.chartHeight) / 2;
+        gaugeConfig.innerRadius = gaugeConfig.outerRadius * (0.6);   //innerRadius  = 0 gives a pie chart, 0 <innerRadius < outerRadius gives a donut chart
+        gaugeConfig.transDur = 1000;
+        gaugeConfig.title = "A gauge visualization";
+        gaugeConfig.desc = "A gauge visualization";
+        gaugeConfig.colourScale = d3.scaleThreshold()
+          .domain(x.color_thresholds.domain)
+          .range(x.color_thresholds.range);
+        gaugeConfig.settings = x.settings;
+        gaugeConfig.settings.locale = (x.settings.locale === "navigator.language") ? navigator.language : x.settings.locale;
+        gaugeConfig.numerator = x.numerator;
+        gaugeConfig.min = x.min;
+        gaugeConfig.max = x.max;
+
+        // Make a data object with keys so we can easily update the selection
+        var data = {};
+        var i;
+        if (x.settings.crosstalk_key === null) {
+          for (i = 0; i < x.data.length; i++) {
+            data[i] = x.data[i];
+          }
+        } else {
+          for (i = 0; i < x.settings.crosstalk_key.length; i++) {
+            data[x.settings.crosstalk_key[i]] = x.data[i];
+          }
+        }
+
+        if (x.settings.statistic === "sum_pct_total") {
+          var numerator = {};
+          if (x.settings.crosstalk_key === null) {
+            for (i = 0; i < x.numerator.length; i++) {
+              numerator[i] = x.numerator[i];
+            }
+          } else {
+            for (i = 0; i < x.settings.crosstalk_key.length; i++) {
+              numerator[x.settings.crosstalk_key[i]] = x.numerator[i];
+            }
+          }
+        }
+
+        drawGauge(el.id, x.data, gaugeConfig);
+
+        // Set up to receive crosstalk filter and selection events
+        let ct_filter = new crosstalk.FilterHandle();
+        ct_filter.setGroup(x.settings.crosstalk_group);
+        ct_filter.on("change", function (e) {
+          if (e.value) {
+            if (x.settings.statistic === "pct_total") {
+              gaugeConfig.numerator = x.numerator.filter((v) => e.value.includes(v));
+            } else if (x.settings.statistic === "sum_pct_total") {
+              gaugeConfig.numerator = filterKeys(numerator, e.value)
+              console.log(gaugeConfig.numerator);
+            }
+            updateGauge(el.id, filterKeys(data, e.value), gaugeConfig);
+          } else {
+            gaugeConfig.numerator = x.numerator;
+            updateGauge(el.id, x.data, gaugeConfig);
+          }
+        });
+
+        let ct_sel = new crosstalk.SelectionHandle();
+        ct_sel.setGroup(x.settings.crosstalk_group);
+        ct_sel.on("change", function (e) {
+          if (e.value) {
+            if (x.settings.statistic === "pct_total") {
+              gaugeConfig.numerator = x.numerator.filter((v) => e.value.includes(v));
+            } else if (x.settings.statistic === "sum_pct_total") {
+              gaugeConfig.numerator = filterKeys(numerator, e.value)
+            }
+            updateGauge(el.id, filterKeys(data, e.value), gaugeConfig);
+          } else {
+            gaugeConfig.numerator = x.numerator;
+            updateGauge(el.id, x.data, gaugeConfig);
+          }
+        });
+      },
+
+      resize: function (width, height) {
+
+        height = Math.max(height, 120);
+        width = Math.max(width, 200);
+
+        d3.select(`#${el.id}`)
+          .attr("width", width)
+          .attr("height", height)
+
+        d3.select(`#${el.id} svg`)
+          .attr("width", width)
+          .attr("height", height)
+
+      }
+
+    };
+  }
+});

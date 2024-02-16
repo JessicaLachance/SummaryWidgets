@@ -1,0 +1,49 @@
+---
+title: "SummaryWidget"
+---
+
+```{r setup, include=FALSE}
+library(crosstalk)
+library(DT)
+library(flexdashboard)
+library(reactable)
+library(SummaryWidgets)
+
+shared_mtcars <- SharedData$new(mtcars[, c("mpg", "wt", "am")])
+```
+
+SummaryWidget is an [HTML widget](http://www.htmlwidgets.org) which works with
+[Crosstalk](https://rstudio.github.io/crosstalk/index.html) to display a single
+summary statistic. The statistic updates when the Crosstalk selection changes. A SummaryWidget can display the count, sum or mean of one column of selected data. 
+It can also have a fixed filter that selects a subset of the full dataset.
+
+Try the example below. Click the checkboxes, manipulate the slider and
+click rows in the data table. Watch the summary text update as the data selection changes.
+The summary text uses four `summarywidget` instances to show four different summary statistics. 
+
+-----
+
+<big>You have selected **`r summarywidget(shared_mtcars)`** cars with an average mpg of
+**`r summarywidget(shared_mtcars, 'mean', 'mpg', digits=1)`**. 
+The **`r summarywidget(shared_mtcars, selection=~am==0)`** cars with automatic
+transmission have an average mpg of 
+**`r summarywidget(shared_mtcars, 'mean', 'mpg', selection=~am==0, digits=1)`**.</big>
+
+
+```{r example, echo=FALSE}
+bscols(
+  widths = c(3, NA),
+  list(
+    filter_checkbox("cyl", "Cylinders", shared_mtcars, ~cyl, inline = TRUE),
+    filter_slider("hp", "Horsepower", shared_mtcars, ~hp, width = "100%")
+  ),
+  datatable(shared_mtcars,
+    width = 600, height = 300,
+    options = list(pageLength = 5, dom = "tp")
+  )
+)
+```
+
+### Next steps
+
+Read the [Using SummaryWidget](using.html) guide.

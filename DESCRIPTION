@@ -1,0 +1,25 @@
+Package: SummaryWidgets
+Title: Crosstalk-enabled summary statistic visualizations
+Version: 1.0
+Authors@R: person("Jessica", "Lachance", email = "lachje10@gmail.com", role = c("aut", "cre"))
+Description: Used with crosstalk, SummaryWidgets display a single summary statistic in a variety of forms. Supported visualizations include an html text span, a gauge and a valuebox.
+URL: 
+BugReports:
+Depends: R (>= 3.3.2)
+License: MIT + file LICENSE
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1
+Imports:
+  crosstalk,
+  htmltools,
+  htmlwidgets,
+  flexdashboard,
+  rlang,
+  bsicons,
+  colorspace
+Suggests: knitr,
+    rmarkdown,
+    DT
+VignetteBuilder: knitr
