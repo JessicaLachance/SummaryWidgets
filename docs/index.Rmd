@@ -2,48 +2,16 @@
 title: "SummaryWidget"
 ---
 
-```{r setup, include=FALSE}
-library(crosstalk)
-library(DT)
-library(flexdashboard)
-library(reactable)
-library(SummaryWidgets)
+SummaryWidgets is a series of [HTML widgets](http://www.htmlwidgets.org) which works with
+[Crosstalk](https://rstudio.github.io/crosstalk/index.html) and Flexdashboard to display a single
+summary statistic in a variety of forms. Options include an html text span, a gauge and a valuebox.
 
-shared_mtcars <- SharedData$new(mtcars[, c("mpg", "wt", "am")])
-```
+This package acts as an extensions of existing work. The html text span build on the work of [Ken Johnson's summarywidget](https://kent37.github.io/summarywidget). The gauge and valuebox are crosstalk-enabled versions of Flexdashboard's 
 
-SummaryWidget is an [HTML widget](http://www.htmlwidgets.org) which works with
-[Crosstalk](https://rstudio.github.io/crosstalk/index.html) to display a single
-summary statistic. The statistic updates when the Crosstalk selection changes. A SummaryWidget can display the count, sum or mean of one column of selected data. 
-It can also have a fixed filter that selects a subset of the full dataset.
+All three widgets serve the same purpose, update one aggregated statistic when the Crosstalk selection changes. These widgets support the following aggregations: count, sum, mean and percent_total (given a selection of the data).
 
-Try the example below. Click the checkboxes, manipulate the slider and
-click rows in the data table. Watch the summary text update as the data selection changes.
-The summary text uses four `summarywidget` instances to show four different summary statistics. 
-
------
-
-<big>You have selected **`r summarywidget(shared_mtcars)`** cars with an average mpg of
-**`r summarywidget(shared_mtcars, 'mean', 'mpg', digits=1)`**. 
-The **`r summarywidget(shared_mtcars, selection=~am==0)`** cars with automatic
-transmission have an average mpg of 
-**`r summarywidget(shared_mtcars, 'mean', 'mpg', selection=~am==0, digits=1)`**.</big>
-
-
-```{r example, echo=FALSE}
-bscols(
-  widths = c(3, NA),
-  list(
-    filter_checkbox("cyl", "Cylinders", shared_mtcars, ~cyl, inline = TRUE),
-    filter_slider("hp", "Horsepower", shared_mtcars, ~hp, width = "100%")
-  ),
-  datatable(shared_mtcars,
-    width = 600, height = 300,
-    options = list(pageLength = 5, dom = "tp")
-  )
-)
-```
+These widgets also support formatting numbers according to a custom locale, and support has been added to customize currency display, percent sign display, unit display, different notation and sign display.
 
 ### Next steps
 
-Read the [Using SummaryWidget](using.html) guide.
+Read the [Reference](reference.html) guide.
