@@ -1,0 +1,29 @@
+url: https://jessicalachance.github.io/SummaryWidgets/
+navbar:
+  structure:
+    left:
+    - intro
+    - reference
+    - articles
+    - tutorials
+    - example_dashboard
+    - news
+    right:
+    - search
+    - github
+    - lightswitch
+  components:
+    example_dashboard:
+      text: Example Dashboard
+      href: ../example_dashboard/example.html
+    reference:
+      text: Reference
+      href: reference/index.html
+    search:
+      search: []
+template:
+  assets: example_dashboard
+  bootstrap: 5
+  bslib:
+    bootswatch: yeti
+

@@ -1,0 +1,226 @@
+---
+title: "SummaryWidgets Example #2 Elections Canada Data"
+output: 
+  html_document:
+    theme:
+      version: 5
+      bootswatch: yeti
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 100% !important;
+  margin: auto;
+}
+</style>
+
+
+```{r setup, echo=FALSE, include=FALSE}
+library(flexdashboard)
+library(SummaryWidgets)
+library(crosstalk)
+library(reactable)
+library(bslib)
+library(dplyr)
+library(forcats)
+library(htmltools)
+library(scales)
+
+knitr::opts_chunk$set(message = FALSE,
+                      warning = FALSE)
+```
+
+
+```{r load_data, echo=FALSE, include=FALSE}
+electors_polls_site <- read.csv(
+  url("https://www.elections.ca/res/rep/off/ovr2021app/53/data_donnees/table_tableau01.csv"),
+    col.names = c("Province",
+                "Population",
+                "Electors",
+                "stationary_polls",
+                "mobile_polls",
+                "advanced_polls",
+                "total_polls"
+                ) 
+)
+
+electors_polls_site <- electors_polls_site %>% 
+  bind_rows(electors_polls_site %>% 
+              summarise(                
+                Population = sum(Population),
+                Electors = sum(Electors),
+                stationary_polls = sum(stationary_polls),
+                mobile_polls = sum(mobile_polls),
+                advanced_polls = sum(advanced_polls),
+                total_polls = sum(total_polls)
+                ) %>% 
+              mutate(Province = "Canada",.before = 1)
+              )
+
+electors_polls_site$Province <- as_factor(electors_polls_site$Province)
+
+voter_turnout_hist <- read.csv(
+  url("https://www.elections.ca/res/rep/off/ovr2021app/53/data_donnees/table_tableau04.csv"),
+  col.names = c("Province",
+                "elector_count_2021",
+                "elector_count_2019",
+                "elector_count_2015",
+                "elector_count_2011",
+                "ballots_cast_2021",
+                "ballots_cast_2019",
+                "ballots_cast_2015",
+                "ballots_cast_2011",
+                "turnout_2021",
+                "turnout_2019",
+                "turnout_2015",
+                "turnout_2011"
+                ) 
+  ) %>% 
+  mutate(turnout_2021 = turnout_2021/100,
+         turnout_2019 = turnout_2019/100,
+         turnout_2015 = turnout_2015/100,
+         turnout_2011 = turnout_2011/100) 
+
+voter_turnout_hist <- voter_turnout_hist %>% 
+  bind_rows(
+    voter_turnout_hist %>% 
+      summarise(elector_count_2021 = sum(elector_count_2021),
+                elector_count_2019 = sum(elector_count_2019),
+                elector_count_2015 = sum(elector_count_2015),
+                elector_count_2011 = sum(elector_count_2011),
+                ballots_cast_2021 = sum(ballots_cast_2021),
+                ballots_cast_2019 = sum(ballots_cast_2019),
+                ballots_cast_2015 = sum(ballots_cast_2015),
+                ballots_cast_2011 = sum(ballots_cast_2011),
+                turnout_2021 = sum(ballots_cast_2021) / sum(elector_count_2021),
+                turnout_2019 = sum(ballots_cast_2019) / sum(elector_count_2019),
+                turnout_2015 = sum(ballots_cast_2015) / sum(elector_count_2015),
+                turnout_2011 = sum(ballots_cast_2011) / sum(elector_count_2011)) %>% 
+      mutate(Province = "Canada",.before = 1)
+  )
+
+voter_turnout_hist$Province <- as_factor(voter_turnout_hist$Province)
+
+```
+
+
+```{r shared_data, echo=FALSE, include=FALSE}
+shared_electors_polls = SharedData$new(electors_polls_site,
+                                       key = ~Province,
+                                       group = "main")
+shared_turnout_hist = SharedData$new(voter_turnout_hist,
+                                     key = ~Province,
+                                     group = "main")
+
+prov_filter <- filter_select(id = "prov_filter",
+              label = "Province",
+              sharedData = shared_turnout_hist,
+              group = ~Province,
+              multiple = FALSE
+              )
+
+avg_turnout <- summaryTextSpan(
+  data = shared_turnout_hist,
+  statistic = "mean",
+  column = "turnout_2021",
+  digits = 1,
+  number_format = "percent")
+
+```
+
+
+```{r bilingual, echo=FALSE, include=FALSE}
+lang <- "e"
+
+source_url <- paste0(
+  "https://www.elections.ca/content.aspx?section=res&dir=rep/off/44gedata&document=summary&lang=",
+  lang)
+
+if (lang == "e") {
+  title <- "Visualizing the Official Voting Results of the 44th General Election"
+  intro_h2 <- "Introduction"
+  intro_para <- "The 44th General Election took place on September 21, 2021.
+        This dashboard visualizes the official voting results of this event by province and territory"
+  intro_data_avail <- "This data is publically available at"
+  intro_ec_web <- "the Elections Canada website"
+  
+  dashboard_h2 <- "Quick Facts"
+  dashboard_para <- list(
+        span("You currently are viewing data for "),
+        span("SELECTED PROVINCE"),
+        span(". In the 44th general election "),
+        span("SELECTED PROVINCE"),
+        span(" had a turnout of "),
+        avg_turnout,
+        span(" compared to the national turnout of"),
+        span(label_percent(accuracy = 0.1)(voter_turnout_hist %>% 
+          filter(Province == "Canada") %>% 
+          pull(turnout_2021)),
+        "."
+        )
+        )
+  stationary_polls_caption <- "Number of Stationary (Ordinary) Polls"
+  mobile_polls_caption <- "Number of Mobile Polls"
+  advanced_polls_caption <- "Number of Advanced Polls"
+}
+
+
+```
+
+```{r dashboard, echo=FALSE, fig.fullwidth = TRUE }
+page_sidebar(
+  title = title,
+  sidebar = prov_filter,
+  div(
+    h2(intro_h2),
+    p(intro_para),
+    p(intro_data_avail,
+      a(href=source_url,
+        intro_ec_web)
+      )
+    ),
+  div(
+    h2(dashboard_h2),
+    p(!!!dashboard_para)
+    ),
+  layout_columns(
+    col_widths = c(4,4,4),
+    summaryValueBox(
+      data = shared_electors_polls,
+      statistic = "sum",
+      column = "stationary_polls",
+      caption = stationary_polls_caption,
+      icon = "building-fill",
+      color_thresholds = list(domain = c(0),
+                          range = c("grey","#6a0032"))
+      ),
+    summaryValueBox(
+      data = shared_electors_polls,
+      statistic = "sum",
+      column = "mobile_polls",
+      caption = mobile_polls_caption,
+      icon = "geo-alt-fill",
+      color_thresholds = list(domain = c(0),
+                          range = c("grey","#6a0032"))
+      ),
+    summaryValueBox(
+      data = shared_electors_polls,
+      statistic = "sum",
+      column = "advanced_polls",
+      caption = advanced_polls_caption,
+      icon = "calendar2-week-fill",
+      color_thresholds = list(domain = c(0),
+                          range = c("grey","#6a0032"))
+      )
+  )
+)
+```
+
+
+```{js}
+function filter_default() {
+    document.getElementById("prov_filter").getElementsByClassName("selectized") 
+[0].selectize.setValue("Canada", false);
+ }
+window.onload = filter_default;
+```

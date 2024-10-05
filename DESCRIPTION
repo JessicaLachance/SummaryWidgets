@@ -3,7 +3,7 @@ Title: Crosstalk-enabled summary statistic visualizations
 Version: 1.0
 Authors@R: person("Jessica", "Lachance", email = "lachje10@gmail.com", role = c("aut", "cre"))
 Description: Used with crosstalk, SummaryWidgets display a single summary statistic in a variety of forms. Supported visualizations include an html text span, a gauge and a valuebox.
-URL: 
+URL: https://jessicalachance.github.io/SummaryWidgets/
 BugReports:
 Depends: R (>= 3.3.2)
 License: MIT + file LICENSE
