@@ -1,23 +1,23 @@
 ---
-title: "SummaryWidgets"
+title: "SummaryWidgets - mtCars Example"
 output: 
   flexdashboard::flex_dashboard:
-    orientation: columns
-    vertical_layout: fill
+    orientation: rows
+    vertical_layout: scroll
     theme: yeti
----
 
+---
 ```{r setup, include=FALSE}
 library(flexdashboard)
 library(SummaryWidgets)
 library(crosstalk)
 library(reactable)
 library(bslib)
+library(htmltools)
 ```
 
 
-```{r}
-
+```{r prepare-items}
 shared_mtcars = SharedData$new(mtcars[,c(1,2,4,6,7,9)])
 
 count_rows <- summaryTextSpan(
@@ -38,28 +38,23 @@ pct_automatic <- summaryTextSpan(
   digits = 0, ## when digits == 0 0.1234 -> 12%
   number_format = "percent") 
 
-
 pct_automatic_vb <- summaryValueBox(
   data = shared_mtcars,
   statistic = "pct_total",
   selection = ~am==0,
   digits = 0, ## when digits == 0 0.1234 -> 12%
   number_format = "percent",
-  icon = "geo")
-
-
-dynamic_caption <- bquote(
-  sprintf("My caption is dynamic: %s", 
-          summaryTextSpan(
-            data = shared_mtcars,
-            statistic = "count")))
+  color_thresholds = list(domain = c(-Inf),
+                          range=c("black","gold")),
+  icon = "car-front-fill"
+)
 
 count_rows_vb <- summaryValueBox(
   data = shared_mtcars,
   statistic = "count",
   caption = "let's test other things for now",
   color_thresholds = list(domain = c(0),
-                          range = c("red","gold")))
+                          range = c("black","gold")))
 
 average_mpg_vb <- summaryValueBox(
   data = shared_mtcars,
@@ -68,10 +63,10 @@ average_mpg_vb <- summaryValueBox(
   digits = 1,
   unit = "mile-per-gallon",
   quantile = 0.5,
-  caption = "Showing median value, can be adapted to other quantiles",
-  icon = "heart",
-  color_thresholds = list(domain = c(20,25),
-                          range = c("#6a0032","#036064","#8b9538"))
+  caption = "Showing median value, can be adapted to other percentiles",
+  icon = "speedometer",
+  color_thresholds = list(domain = c(20),
+                          range = c("#6a0032","#036064"))
   ) #well formed unit https://tc39.es/ecma402/#sec-iswellformedunitidentifier
 
 
@@ -102,25 +97,43 @@ maxQSec <- summaryGauge(
   unit = "second")
 ```
 
-Column {data-width=250}
+Row
 -----------------------------------------------------------------------
 
-### Filter options
+### Introduction
+
+This dashboard aims to show and test the features of the SummaryWidgets R package. It is modeled on [Ken Johnson's demo](https://kent37.github.io/summarywidget/) for his original SummaryWidget package. 
+
+Like Ken Johnson's dashboard, this dashboard uses the mtcars dataset as the example dataset. The mtcars dataset is one of the base R datasets and comes from the 1974 Motor Trend US magazine. The dataset includes 11 aspects of automobile design and performance for 32 automobiles.  More details about the mtcars dataset can be found at [R: Motor Trend Car Road Tests ](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/mtcars.html).
+
+This dashboard is interactive, you can view a customized subset of the data by using the controls in the section "Filter Options". You can select one more more cylinder options, and select a range of horsepower values to create custom results. By default, the entire dataset of 32 cars are selected.
+
+#### Current Selection
+
+The following paragraph highlights SummaryWidgets' ability to seamlessly integrate a summarized number within a paragraph of text, which can change as the filter options change.
+
+You have selected `r count_rows` cars with an average mpg of
+`r average_mpg`. Of the selected cars, `r pct_automatic` are automatic.
+
+### Filter options {data-width=175}
+
 ```{r example, echo=FALSE}
 filter_checkbox("cyl", "Cylinders", shared_mtcars, ~cyl, inline = TRUE)
 filter_slider("hp", "Horsepower", shared_mtcars, ~hp, width = "100%")
 ```
 
+Row
+-----------------------------------------------------------------------
 
-### Value Box 1: % automatic cars, icon, no caption
+### Number of Cars Selected
 
-```{r}
+#### Description
 
-pct_automatic_vb
+This section highlights SummaryWidgets' capacity to present a dynamic valuebox the number of cars which fit the filter criteria. Additionally this valuebox is set to show no icon, but include caption. 
 
-```
+<!-- The colour of the valuebox is set to be the primary theme colour, using `bs_get_variables(bs_theme(),"primary")`. -->
 
-### Value Box 2: Number of rows, no icon, caption
+#### Valuebox
 
 ```{r}
 
@@ -128,7 +141,28 @@ count_rows_vb
 
 ```
 
-### Value Box 3: Average MPG, icon, long caption
+### Percentage of Automatic Cars
+
+#### Description
+
+This section highlights SummaryWidgets' capacity to present a dynamic valuebox containing the percentage of all cars which are automatic. Additionally this valuebox is set to show a custom icon, but no caption.
+
+#### Valuebox
+
+```{r}
+
+pct_automatic_vb
+
+```
+
+
+### Median Miles per Gallon
+
+#### Description
+
+This section highlights SummaryWidgets' capacity to present a dynamic valuebox the median miles per gallon (mpg) cars which fit the filter criteria. This metric shows SummaryWidgets' ability to present a standard unit next to the number, a feature which kent37's SummaryWidget lacked. This valuebox includes an icon, a caption, and the background colour adjusts depending on the value (burgundy if the value is under 20 mpg, and teal if the value is over 20).
+
+#### Valuebox
 
 ```{r}
 
@@ -136,18 +170,12 @@ average_mpg_vb
 
 ```
 
-Column
+Row {data-height=250 .tabset .tabset-fade}
 -----------------------------------------------------------------------
-
-### Summary widget in R markdown text
-
-You have selected `r count_rows` cars with an average mpg of
-`r average_mpg`. Of the selected cars, `r pct_automatic` are automatic.
 
 ### Summary widget in guages, wrapped in bscols (% automatic and max Qsec)
 
 ```{r}
-
 bscols(pct_automatic2, maxQSec)
 
 ```
@@ -169,7 +197,7 @@ maxQSec
 ```
 
 
-Column {data-width=650}
+Row
 -----------------------------------------------------------------------
 
 ### Summary widget as the footer in a reactable
@@ -200,7 +228,7 @@ reactable(
        statistic = "sum",
        column = "wt",
        digits = 0,
-       unit = "pound") 
+       unit = "pound")
        ),
    am = colDef(
      name ="Automatic? (0 = Automatic)",
@@ -209,11 +237,10 @@ reactable(
        statistic = "pct_total",
        selection = ~am==0,
        digits = 0,
-       number_format = "percent") 
+       number_format = "percent")
    )
   ),
   bordered = TRUE,
   striped = TRUE,
   highlight = TRUE)
 ```
-
