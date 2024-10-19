@@ -4,6 +4,21 @@ HTMLWidgets.widget({
 
   factory: function (el, width, height) {
 
+    var convert_inf = function(x) {
+      x.domain = (Array.isArray(x.domain)) ? x.domain : [x.domain]
+      x.domain = x.domain.map(function(x){
+                  switch(x) {
+                    case "Number.NEGATIVE_INFINITY":
+                      return -Infinity;
+                    case "Number.POSITIVE_INFINITY":
+                      return Infinity;
+                    default:
+                      return Number(x);  // Return the value unchanged if it's not an infinity
+                  }
+      })
+      return x;
+    };
+
     // Filter obj, returning a new obj containing only
     // values with keys in keys.
     var filterKeys = function (obj, keys) {
@@ -18,19 +33,23 @@ HTMLWidgets.widget({
     return {
       renderValue: function (x) {
 
+        var color_thresholds = x.color_thresholds;
+
+        color_thresholds = convert_inf(color_thresholds);
+
         x.settings.locale = (x.settings.locale === "navigator.language") ? navigator.language : x.settings.locale;
 
         let bgColourScale = d3.scaleThreshold()
-          .domain(typeof (x.color_thresholds.domain) === "number" ? [x.color_thresholds.domain] : x.color_thresholds.domain)
-          .range(x.color_thresholds.range);
+          .domain(color_thresholds.domain)
+          .range(color_thresholds.range);
 
         let textColourScale = d3.scaleThreshold()
-          .domain(typeof (x.color_text.domain) === "number" ? [x.color_text.domain] : x.color_text.domain)
-          .range(x.color_text.range);
+          .domain(color_thresholds.domain)
+          .range(color_thresholds.text_range);
 
         let iconColourScale = d3.scaleThreshold()
-          .domain(typeof (x.color_icon.domain) === "number" ? [x.color_icon.domain] : x.color_icon.domain)
-          .range(x.color_icon.range);
+          .domain(color_thresholds.domain)
+          .range(color_thresholds.icon_range);
 
         let nodeID = el.id
 
@@ -110,7 +129,7 @@ HTMLWidgets.widget({
         }
 
         // Update the display to show the values in d
-        var update = function (d, n) {
+        var update = function (d, n,callback) {
 
           let [value, value_format] = calculateSingleValues(d, n, x)
 
@@ -126,9 +145,25 @@ HTMLWidgets.widget({
 
           if (x.caption) {
             svg.select(".caption-text")
-              .transition()
-              .duration(1000)
-              .style("fill", textColourScale(value));
+            .data([x.caption])
+            .join(function (enter) {
+              return enter.append("text")
+              .text(d => d)
+              .attr('class', "caption-text")
+              .attr("font-size", "14px")
+              .attr("text-anchor", "start")
+              .style("font-weight", "bold")
+              .attr("dx", "5%")
+              .attr("dy", "72%")
+              .style("fill", "white")
+              },
+              function (update) {
+                return update.text(d => d)
+              })
+            .call(wrap, width * 0.94)
+            .transition()
+            .duration(1000)
+            .style("fill", textColourScale(value))
           }
 
           if (x.icon) {
@@ -154,9 +189,9 @@ HTMLWidgets.widget({
         ct_sel.setGroup(x.settings.crosstalk_group);
         ct_sel.on("change", function (e) {
           if (e.value && e.value.length) {
-            update(filterKeys(data, e.value), x.numerator);
+            update(filterKeys(data, e.value), x.numerator,x.callback);
           } else {
-            update(data, x.numerator);
+            update(data, x.numerator, x.callback);
           }
         });
 
@@ -167,14 +202,11 @@ HTMLWidgets.widget({
 
         let resize_svg = d3.select(`#${el.id}`)
           .attr("width", width)
-          .attr("height", height)
           .select("svg")
           .attr("width", width)
-          .attr("height", height)
 
         let resize_rect = resize_svg.select("rect")
           .attr("width", width)
-          .attr("height", height)
 
         let icon = resize_svg.select("path")
 
@@ -190,7 +222,6 @@ HTMLWidgets.widget({
         }
         resize_svg.selectAll(".caption-text")
           .call(wrap, width * 0.94)
-
       }
 
     };

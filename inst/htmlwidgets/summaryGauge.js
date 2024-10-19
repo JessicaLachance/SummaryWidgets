@@ -3,6 +3,21 @@ HTMLWidgets.widget({
   type: 'output',
 
   factory: function (el, width, height) {
+    var v_offset = 20;
+    var convert_inf = function(x) {
+      x.domain = (Array.isArray(x.domain)) ? x.domain : [x.domain]
+      x.domain = x.domain.map(function(x){
+                  switch(x) {
+                    case "Number.NEGATIVE_INFINITY":
+                      return -Infinity;
+                    case "Number.POSITIVE_INFINITY":
+                      return Infinity;
+                    default:
+                      return Number(x);  // Return the value unchanged if it's not an infinity
+                  }
+      })
+      return x;
+    };
 
     return {
       renderValue: function (x) {
@@ -80,7 +95,6 @@ HTMLWidgets.widget({
         }
 
         var getValueFootnote = function (value, min, max, locale) {
-          console.log(locale);
           let value_footnote = "";
           if (value < min) {
             switch (locale.substring(0, 2)) {
@@ -225,7 +239,7 @@ HTMLWidgets.widget({
             .data([value_footnote]).enter()
             .append("text")
             .attr('class', "ftn-text")
-            .attr("font-size", "9px")
+            .attr("font-size", "12px")
             .attr("text-anchor", "middle")
             .attr("transform",
               `translate(${0},${config.margin.top + 8})`)
@@ -384,19 +398,25 @@ HTMLWidgets.widget({
 
         } // end updateGauge
 
-        height = Math.max(height, 120);
-        width = Math.max(width, 200);
+        var color_thresholds = x.color_thresholds;
+        color_thresholds = convert_inf(color_thresholds);
+
+        if(height < (width/2)+v_offset){
+            width = (height+v_offset)*2
+        } else {
+          height = Math.max((width/2)+v_offset,120)
+        }
 
         d3.select(`#${el.id}`)
           .attr("width", width)
-          .attr("height", height)
+          .attr("height", height);
 
         let gaugeConfig = new Object();
 
         gaugeConfig.containerWidth = width;
         gaugeConfig.containerHeight = height;
-        gaugeConfig.viewbox = { width: 200, height: 100 };
-        gaugeConfig.margin = { top: 15, right: -5, bottom: -15, left: -5 };
+        gaugeConfig.viewbox = { width: 200, height: 100+v_offset };
+        gaugeConfig.margin = { top: 10, right: -5, bottom: -v_offset, left: -5 };
         gaugeConfig.chartWidth = gaugeConfig.viewbox.width - gaugeConfig.margin.left - gaugeConfig.margin.right;
         gaugeConfig.chartHeight = gaugeConfig.viewbox.height - gaugeConfig.margin.top - gaugeConfig.margin.bottom;
         gaugeConfig.outerRadius = Math.min(gaugeConfig.chartWidth, gaugeConfig.chartHeight) / 2;
@@ -450,7 +470,6 @@ HTMLWidgets.widget({
               gaugeConfig.numerator = x.numerator.filter((v) => e.value.includes(v));
             } else if (x.settings.statistic === "sum_pct_total") {
               gaugeConfig.numerator = filterKeys(numerator, e.value)
-              console.log(gaugeConfig.numerator);
             }
             updateGauge(el.id, filterKeys(data, e.value), gaugeConfig);
           } else {
@@ -478,16 +497,28 @@ HTMLWidgets.widget({
 
       resize: function (width, height) {
 
-        height = Math.max(height, 120);
-        width = Math.max(width, 200);
+        if(height < (width/2)+v_offset){
+
+          d3.select(`#${el.id} svg`)
+            .attr("transform",
+              `translate(${(width / 2)-(height+v_offset)},0)`);
+
+          width = (height+v_offset)*2
+        } else {
+          d3.select(`#${el.id} svg`)
+            .attr("transform",
+              `translate(0,${(height / 2)-(Math.max((width/2)+v_offset,120)/2)})`);
+
+          height = Math.max((width/2)+v_offset,120)
+        }
+
+        d3.select(`#${el.id} svg`)
+            .attr("width", width)
+            .attr("height", height)
 
         d3.select(`#${el.id}`)
           .attr("width", width)
-          .attr("height", height)
-
-        d3.select(`#${el.id} svg`)
-          .attr("width", width)
-          .attr("height", height)
+          .attr("height", height);
 
       }
 

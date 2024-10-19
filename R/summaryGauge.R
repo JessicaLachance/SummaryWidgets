@@ -31,7 +31,7 @@
 #' @param notation How the number should be displayed.
 #' Possible vales are `c("standard", "scientific","engineering","compact")`.
 #' Standard is the default.
-#' @param quantile A number in `[0,1]`, specifying the quantile to use if statistic = "quantile". 
+#' @param quantile A number in `[0,1]`, specifying the quantile to use if statistic = "quantile".
 #' The default number is 0.5 (i.e. median)
 #' @param min Minimum numeric value to display alongside the calculated statistic.
 #' By default, use 0 if statistic %in% c("count", "pct_total") and use the minimum value of the data otherwise.
@@ -92,6 +92,31 @@ summaryGauge <- function(data,
     group <- NULL
   }
 
+  if (!is.numeric(color_thresholds$domain)) {
+    stop("color_thresholds domain must be a vector of numbers")
+  }
+
+  if (!is.null(get0("min")) && !is.numeric(min)) {
+    stop("`min` must be a number or empty")
+  }
+
+  if (!is.null(get0("max")) && !is.numeric(max)) {
+    stop("`max` must be a number or empty")
+  }
+
+  color_thresholds$domain <- sapply(
+    color_thresholds$domain,
+    function(x) {if (is.infinite(x)) {
+      if (x < 0) {
+        "Number.NEGATIVE_INFINITY"  # For -Inf
+      } else {
+        "Number.POSITIVE_INFINITY"  # For +Inf
+      }
+    } else {
+      x  # Pass the value directly if it's not infinite
+    }}
+  )
+
   statistic <- match.arg(statistic)
   number_format <- match.arg(number_format)
   signDisplay <- match.arg(signDisplay)
@@ -150,7 +175,7 @@ summaryGauge <- function(data,
       stop("No ", column, " column in data.")
     }
     data <- data[[column]]
-    
+
     if (!is.null(numerator)){
       numerator <- numerator[[column]]
     }

@@ -27,13 +27,13 @@
 #' @param unit A string containing a valid unit identifier from [this list](https://tc39.es/ecma402/#table-sanctioned-single-unit-identifiers)
 #' Pairs of simple units can be concatenated with "-per-" to make a compound unit.
 #' NOTE: If this value is not null, number_format will be reassigned to `"unit"`
-#' @param quantile A number in `[0,1]`, specifying the quantile to use if statistic = "quantile". 
+#' @param quantile A number in `[0,1]`, specifying the quantile to use if statistic = "quantile".
 #' The default number is 0.5 (i.e. median)
 #' @param notation How the number should be displayed.
 #' Possible vales are `c("standard", "scientific","engineering","compact")`.
 #' Standard is the default.
-#' @param caption Optiona parameter. The caption to display beneath the value.
-#' @param icon Optional parameter. A string representing the name of a bootstrap icon. 
+#' @param caption Optional parameter. The caption to display beneath the value.
+#' @param icon Optional parameter. A string representing the name of a bootstrap icon.
 #'  See https://icons.getbootstrap.com/ for complete list of names
 #' @param color_thresholds a list containing two named vectors, domain and range.
 #' The domain is a series of numbers and range is a series of colour strings (hex or html colour names) such that for a value x:
@@ -42,7 +42,7 @@
 #'  - ...
 #'  - if `domain[n-1] <= x < domain[n]` then `colour == range[n]`
 #' - if `domain[n] <= x` then `colour == range[n+1]`
-#' 
+#'
 #' As such, the length of the named vector range should be one item longer than the length of domain.
 #' The default value for color_threshold is `list(domain = c(0.5,0.8), range = c("red","gold","mediumseagreen")`).
 #' To fix a single colour, `let color_thresholds = list(domain = c(-Inf), range=c(unused_color,desired_color))`
@@ -89,25 +89,14 @@ summaryValueBox <- function(data,
                             width = NULL,
                             height = NULL,
                             elementId = NULL) {
-  color_contrast_w <- colorspace::contrast_ratio(color_thresholds$range, "white")
-  color_contrast_b <- colorspace::contrast_ratio(color_thresholds$range, "black")
-  best_constrast_w <- color_contrast_w > color_contrast_b
 
-  color_text <- list(
-    domain = color_thresholds$domain,
-    range = ifelse(best_constrast_w, "white", "black")
-  )
-  color_icon <- list(
-    domain = color_thresholds$domain,
-    range = as.vector(mapply(
-      function(a, b) {
-        ifelse(b, colorspace::lighten(a, 0.25, space = "combined"),
-          colorspace::darken(a, 0.25, "combined")
-        )
-      },
-      color_thresholds$range, best_constrast_w
-    ))
-  )
+  if (!is.null(get0("caption")) && !is_scalar_atomic(caption)) {
+    stop("`caption` must be of scalar type or empty")
+  }
+
+  if (!is.numeric(color_thresholds$domain)) {
+    stop("color_thresholds domain must be a vector of numbers")
+  }
 
   if (crosstalk::is.SharedData(data)) {
     # Using Crosstalk
@@ -127,10 +116,6 @@ summaryValueBox <- function(data,
   notation <- match.arg(notation)
   numerator <- NULL;
 
-  if(is.function(caption)){
-    print("hello!!")
-    caption = eval(caption)
-  }
 
   if (statistic %in% c("pct_total", "sum_pct_total")) {
     # If selection is given in the context of pct_total, apply selection to count rows in the numerator
@@ -189,13 +174,38 @@ summaryValueBox <- function(data,
     }
   }
 
+  color_contrast_w <- colorspace::contrast_ratio(color_thresholds$range, "white")
+  color_contrast_b <- colorspace::contrast_ratio(color_thresholds$range, "black")
+  best_constrast_w <- color_contrast_w > color_contrast_b
+
+  color_thresholds$domain <- sapply(
+    color_thresholds$domain,
+    function(x) {if (is.infinite(x)) {
+      if (x < 0) {
+        "Number.NEGATIVE_INFINITY"  # For -Inf
+      } else {
+        "Number.POSITIVE_INFINITY"  # For +Inf
+      }
+    } else {
+      x  # Pass the value directly if it's not infinite
+    }}
+  )
+
+  color_thresholds$text_range <- ifelse(best_constrast_w, "white", "black")
+  color_thresholds$icon_range <- as.vector(mapply(function(a, b) {
+    ifelse(
+      b,
+      colorspace::lighten(a, 0.25, space = "combined"),
+      colorspace::darken(a, 0.25, "combined")
+    )
+  }, color_thresholds$range, best_constrast_w))
+
+
   # forward options using x
   x <- list(
     data = data,
     numerator = get0("numerator"),
     color_thresholds = color_thresholds,
-    color_text = color_text,
-    color_icon = color_icon,
     caption = get0("caption"),
     icon = ifelse(!is.null(icon), bsicons::bs_icon(icon), FALSE),
     settings = list(
