@@ -1908,7 +1908,35 @@ flex: 0 0 auto;
   }
 })();
 </script>
-<script>var format_percent = function (v, x) {
+<script>var invertColor = function(hex, bw) {
+    if (hex.indexOf('#') === 0) {
+        hex = hex.slice(1);
+    }
+    // convert 3-digit hex to 6-digits.
+    if (hex.length === 3) {
+        hex = hex[0] + hex[0] + hex[1] + hex[1] + hex[2] + hex[2];
+    }
+    if (hex.length !== 6) {
+        throw new Error('Invalid HEX color.');
+    }
+    var r = parseInt(hex.slice(0, 2), 16),
+        g = parseInt(hex.slice(2, 4), 16),
+        b = parseInt(hex.slice(4, 6), 16);
+    if (bw) {
+        // https://stackoverflow.com/a/3943023/112731
+        return (r * 0.299 + g * 0.587 + b * 0.114) > 186
+            ? '#000000'
+            : '#FFFFFF';
+    }
+    // invert color components
+    r = (255 - r).toString(16);
+    g = (255 - g).toString(16);
+    b = (255 - b).toString(16);
+    // pad each with zeros and return
+    return "#" + padZero(r) + padZero(g) + padZero(b);
+}
+
+var format_percent = function (v, x) {
   return v.toLocaleString(x.locale,
     {
       style: "percent",
@@ -2015,6 +2043,44 @@ var calculateSingleValues = function (d, n, x) {
   return ([value, value_format])
 }
 
+var calculateSingleText = function (d, n, x) {
+  let values = [];
+  for (var key in d) {
+    if (d.hasOwnProperty(key)) { values.push(d[key]); }
+  }
+  let value = 0;
+  if (values.length) {
+    switch (x.settings.statistic) {
+      case 'count':
+        value = format_number(values.length,x);
+        break;
+      case 'first':
+        value = values[0]
+        break;
+      case 'last':
+        value = values[-1];
+        break;
+      case "min":
+        value = values.sort(x.settings.sort ?? d3.ascending)[0];
+        break;
+      case "max":
+        value = values.sort(x.settings.sort ?? d3.ascending)[-1];
+        break;
+      case "mode":
+        value = d3.mode(values)
+        break;
+      case 'concatenate':
+        value = values.join(x.settings.delim)
+        break;
+      case 'unique':
+        let num = values.filter((v, idx) => arr.indexOf(v) === idx).length;
+        value = format_number(num,x);
+        break;
+    }
+  }
+  return (value)
+}
+
 /**
  * Wraps the contents of a <text> element to a certain max width
  * If the data is of the form {key: "text", value: "value"} wrap will use data.key as the label
@@ -2024,7 +2090,7 @@ var calculateSingleValues = function (d, n, x) {
  * @param {selection} txt - A D3 selection of nodes, containing some data (i.e. desired labels)
  * @param {number} width - The max width in pixels before text should wrap
  * @param {function} accessor - Optional param. A function which can access the text to be wrapped from each element in the txt selection
- * @param {boolean} verticalCenter - Optional param. If true, then the dy values of the lines will be adjusted 
+ * @param {boolean} verticalCenter - Optional param. If true, then the dy values of the lines will be adjusted
  *                              so that the text block is vertically centered on the initial y value of the text node.
  *                              If false/undefines, then the first line will co-indcide with the initial y value with the text node
  *                              and subsequent lines will be underneath.
@@ -2085,7 +2151,7 @@ function shrink(txt, width) {
   txt.each(function () {
     var text = d3.select(this);
     var font_size = parseFloat(text.attr("font"));
-    
+
     if (text.node().getComputedTextLength() > width) {
       do {
         font_size = (font_size > 10) ? (font_size - 1) : (font_size - 0.5);
@@ -2095,9 +2161,109 @@ function shrink(txt, width) {
 
   });
 }
+
+// The translations were made using https://bulktranslator.com/
+let gaugeAltText = new Object();
+
+gaugeAltText.de = {
+  desc:"Dieses Diagramm visualisiert einen Schlüsselwert als Maß relativ zu einem Minimum und einem Maximum. ",
+  min:"Der Mindestwert beträgt ",
+  max:"Der Maximalwert beträgt ",
+  value: "The key value is "
+}
+gaugeAltText.en = {
+  desc:"This graph visualizes a key value as a gauge, relative to a minimum and a maximum value. ",
+  min:"The minimum value is ",
+  max:"The maximum value is ",
+  value: "The key value is "
+}
+
+gaugeAltText.es = {
+  desc:"Este gráfico visualiza un valor clave como indicador, en relación con un mínimo y un máximo. ",
+  min:"El valor mínimo es ",
+  max:"El valor máximo es ",
+  value: "The key value is "
+}
+
+gaugeAltText.fr = {
+  desc:"Ce graphique visualise une valeur clé sous forme de jauge, par rapport à un minimum et un maximum. ",
+  min:"La valeur minimale est ",
+  max:"La valeur maximale est ",
+  value: "The key value is "
+}
+
+gaugeAltText.it = {
+  desc:"Questo grafico visualizza un valore chiave come indicatore, relativo a un minimo e un massimo. ",
+  min:"Il valore minimo è ",
+  max:"Il valore massimo è ",
+  value: "The key value is "
+}
+
+gaugeAltText.nl = {
+  desc:"Deze grafiek visualiseert een sleutelwaarde als maatstaf, relatief ten opzichte van een minimum en een maximum",
+  min:"De minimumwaarde bedraagt ",
+  max:"De maximale waarde is ",
+  value: "The key value is "
+}
+
+gaugeAltText.ru = {
+  desc:"Этот график визуализирует ключевое значение в виде шкалы относительно минимума и максимума. ",
+  min:"Минимальное значение — ",
+  max:"Максимальное значение — ",
+  value: "The key value is "
+}
+
+
+
+// The translations were made using https://bulktranslator.com/
+let vbAltText = new Object();
+
+vbAltText.de = {
+  desc:"Dieses Diagramm visualisiert einen Schlüsselwert als buntes Kästchen. ",
+  value: "Der Schlüsselwert ist ",
+  caption:"Die Überschrift unter dem Schlüsselwert lautet: ",
+}
+
+vbAltText.en = {
+  desc:"This graph visualizes a key value as colourful box. ",
+  value: "The key value is ",
+  caption: "The caption below the key value reads: "
+}
+
+vbAltText.es = {
+  desc:"Este gráfico visualiza un valor clave como un cuadro colorido. ",
+  value: "El valor clave es ",
+  caption:"El título debajo del valor clave dice: ",
+}
+
+vbAltText.fr = {
+  desc:"Ce graphique visualise une valeur clé sous forme de boîte colorée. ",
+  value: "La valeur clé est ",
+  caption:"La légende sous la valeur clé indique : ",
+}
+
+vbAltText.it = {
+  desc:"Questo grafico visualizza un valore chiave come una casella colorata. ",
+  value: "Il valore chiave è ",
+  caption:"La didascalia sotto il valore chiave recita: ",
+}
+
+vbAltText.nl = {
+  desc:"Deze grafiek visualiseert een sleutelwaarde als een kleurrijk kader. ",
+  value: "De sleutelwaarde is ",
+  caption:"Het onderschrift onder de sleutelwaarde luidt:"
+}
+
+vbAltText.ru = {
+  desc:"Этот график визуализирует ключевое значение в виде цветного прямоугольника. ",
+  value: "Ключевое значение – ",
+  caption:"Подпись под ключевым значением гласит:",
+}
+
+
 </script>
 <script>HTMLWidgets.widget({
-  name: 'summaryTextSpan',
+  name: 'summaryNumberSpan',
   type: 'output',
 
   factory: function (el, width, height) {
@@ -2454,9 +2620,22 @@ background-color: #999999;
 
         var color_thresholds = x.color_thresholds;
 
-        color_thresholds = convert_inf(color_thresholds);
+        var config = new Object();
 
         x.settings.locale = (x.settings.locale === "navigator.language") ? navigator.language : x.settings.locale;
+        config.lang = x.settings.locale.split("-")[0].toLowerCase();
+        config.title = x.title;
+        if(["de","en","es","fr","it","nl","ru"].includes(config.lang)){
+          config.desc = vbAltText[config.lang]["desc"];
+          config.valueText = vbAltText[config.lang]["value"];
+          config.caption = x.caption ? vbAltText[config.lang]["caption"].concat(x.caption) : "";
+        } else {
+          config.desc = ""
+          config.valueText = ""
+          config.caption = x.caption ?? ""
+        }
+
+        color_thresholds = convert_inf(color_thresholds);
 
         let bgColourScale = d3.scaleThreshold()
           .domain(color_thresholds.domain)
@@ -2481,18 +2660,19 @@ background-color: #999999;
 
         svg.select("svg");
 
-        // svg.append("title")
-        //   .attr("id", `${nodeID}-title`)
-        //   .text(config.title);
+        svg.append("title")
+          .attr("id", `${nodeID}-title`)
+          .text(config.title);
 
-        // svg.append("desc")
-        //   .attr("id", `${nodeID}-desc`)
-        //   .text(config.desc);
+         svg.append("desc")
+          .attr("id", `${nodeID}-desc`)
+          .attr("aria-live","polite")
 
         let svg_rect = svg.append("rect")
           .style("width", "100%")
           .style("height", "100%")
-          .style("fill", "white");
+          .style("fill", "white")
+          .style('filter', 'none');
 
         if (x.icon) {
 
@@ -2516,8 +2696,8 @@ background-color: #999999;
           .attr("dominant-baseline", "central")
           .attr("dx", "5%")
           .attr("dy", "50%")
-          .style("font-weight", "bold")
-          .style("fill", "white")
+          .style('filter', 'none')
+          .style("font-weight", "bold");
 
         if (x.caption) {
           svg.selectAll(".caption-text")
@@ -2552,14 +2732,24 @@ background-color: #999999;
 
           let [value, value_format] = calculateSingleValues(d, n, x)
 
-          svg.select("rect").transition()
+          svg.select(`#${nodeID}-desc`)
+            .text(config.desc.concat(
+              config.valueText,
+              value_format, ". ",
+              config.caption
+            ));
+
+          svg.select("rect")
+            .transition()
             .duration(1000)
+            .style('filter', 'none')
             .style("fill", bgColourScale(value));
 
           svg.select(".value-text")
             .text(value_format ?? "NA")
             .transition()
             .duration(1000)
+            .style('filter', 'none')
             .style("fill", textColourScale(value));
 
           if (x.caption) {
@@ -2614,6 +2804,32 @@ background-color: #999999;
           }
         });
 
+        // Make adjustments if darkmode is on
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', event => {
+          console.log("Hello!")
+          const newColorScheme = event.matches ? "dark" : "light";
+          if(newColorScheme === "dark"){
+
+            svg.select("rect")
+              .attr("style","fill: 'yellow' !important ");
+
+            svg.select(".value-text")
+              .attr("style","fill: 'white' !important ");
+
+            if(x.caption){
+              svg.select(".caption-text")
+                .attr("style","fill: 'white' !important ");
+            }
+            if(x.icon){
+              svg.select("path")
+                .attr("style","fill: 'darkkhaki' !important ");
+            }
+          }else{
+            update(data,x.numerator);
+          }
+
+          });
+
         update(data, x.numerator);
       },
 
@@ -2621,11 +2837,14 @@ background-color: #999999;
 
         let resize_svg = d3.select(`#${el.id}`)
           .attr("width", width)
+          .attr("height", height)
           .select("svg")
           .attr("width", width)
+          .attr("height", height)
 
         let resize_rect = resize_svg.select("rect")
           .attr("width", width)
+          .attr("height", height)
 
         let icon = resize_svg.select("path")
 
@@ -3080,19 +3299,47 @@ var colorbrewer = {YlGn: {
         * Draws a gauge, with the number in the center, and the min and max value underneath
         * @param {String} nodeID - The id of the containing div of the chart. This div must have the class svg-wrapper
         * @param {Array} data - An array of objects representing the data to be visualized
-        * @param {Object} config - The pie chart config object
+        * @param {Object} config - The gauge config object
         */
         var drawGauge = function (nodeID, data, config) {
+
+          let [value, min, max] = calculateGaugeValues(data, config);
+
+          let value_footnote = getValueFootnote(value, min, max, config.settings.locale);
+
+          let value_f, min_f, max_f;
+
+          switch (config.settings.number_format) {
+            case 'percent':
+              value_f = format_percent(value, config.settings);
+              min_f = format_percent(min, config.settings);
+              max_f = format_percent(max, config.settings);
+              break;
+            case "currency":
+              value_f = format_currency(value, config.settings);
+              min_f = format_currency(min, config.settings);
+              max_f = format_currency(max, config.settings);
+              break;
+            case "unit":
+              value_f = format_unit(value, config.settings);
+              min_f = format_unit(min, config.settings);
+              max_f = format_unit(max, config.settings);
+              break;
+            case "decimal":
+              value_f = format_number(value, config.settings);
+              min_f = format_number(min, config.settings);
+              max_f = format_number(max, config.settings);
+              break;
+          }
 
           let svg = d3.select(`#${nodeID}`)
             .append("svg")
             .attr("width", config.containerWidth)
             .attr("height", config.containerHeight)
             .attr("role", "img")
+            .attr("aria-labelledby",`${nodeID}-title ${nodeID}-desc`)
             .attr("preserveAspectRatio", "xMidYMin meet")
-            .attr("viewBox", `0 0 ${config.viewbox.width}, ${config.viewbox.height}`)
-
-            .attr("aria-labelledby", `${nodeID}-title ${nodeID}-desc`);
+            .attr("viewBox", `0 0 ${config.viewbox.width}, ${config.viewbox.height}`);
 
           svg.append("title")
             .attr("id", `${nodeID}-title`)
@@ -3100,9 +3347,16 @@ var colorbrewer = {YlGn: {
 
           svg.append("desc")
             .attr("id", `${nodeID}-desc`)
-            .text(config.desc);
-
-          let [value, min, max] = calculateGaugeValues(data, config);
+            .attr("aria-live","polite")
+            .text(config.desc.concat(
+              config.minText,
+              min_f, ". ",
+              config.maxText,
+              max_f,". ",
+              config.valueText,
+              value_f, ". ",
+              value_footnote
+            ));
 
           let valuePct = targetPercent(min, max, value);
           valuePct = valuePct < 0 ? 0 : valuePct > 1 ? 1 : valuePct;
@@ -3131,42 +3385,18 @@ var colorbrewer = {YlGn: {
             .style("stroke", function (d) { return d.fill })
             .style("fill", function (d) { return d.fill });
 
-          let value_footnote = getValueFootnote(value, min, max, config.settings.locale);
-
-          switch (config.settings.number_format) {
-            case 'percent':
-              value = format_percent(value, config.settings);
-              min = format_percent(min, config.settings);
-              max = format_percent(max, config.settings);
-              break;
-            case "currency":
-              value = format_currency(value, config.settings);
-              min = format_currency(min, config.settings);
-              max = format_currency(max, config.settings);
-              break;
-            case "unit":
-              value = format_unit(value, config.settings);
-              min = format_unit(min, config.settings);
-              max = format_unit(max, config.settings);
-              break;
-            case "decimal":
-              value = format_number(value, config.settings);
-              min = format_number(min, config.settings);
-              max = format_number(max, config.settings);
-              break;
-          }
-
           svgGauge.selectAll(".value-text")
-            .data([value]).enter()
+            .data([value_f]).enter()
             .append("text")
             .attr('class', "value-text")
             .attr("font-size", "18px")
             .attr("text-anchor", "middle")
+            .style("fill","#000")
             .text(d => d)
             .call(shrink, config.innerRadius * 2);
 
           svgGauge.selectAll(".min-text")
-            .data([min]).enter()
+            .data([min_f]).enter()
             .append("text")
             .attr('class', "min-text")
             .attr("font-size", "12px")
@@ -3177,7 +3407,7 @@ var colorbrewer = {YlGn: {
             .text(d => d);
 
           svgGauge.selectAll(".max-text")
-            .data([max]).enter()
+            .data([max_f]).enter()
             .append("text")
             .attr('class', "max-text")
             .attr("font-size", "12px")
@@ -3208,14 +3438,51 @@ var colorbrewer = {YlGn: {
          */
         var updateGauge = function (nodeID, data, config) {
 
+          let [value, min, max] = calculateGaugeValues(data, config);
+
+          let value_footnote = getValueFootnote(value, min, max, config.settings.locale);
+
+          let value_f, min_f, max_f;
+
+          if (value !== "NA") {
+            switch (config.settings.number_format) {
+              case 'percent':
+                value_f = format_percent(value, config.settings);
+                min_f = format_percent(min, config.settings);
+                max_f = format_percent(max, config.settings);
+                break;
+              case "currency":
+                value_f = format_currency(value, config.settings);
+                min_f = format_currency(min, config.settings);
+                max_f = format_currency(max, config.settings);
+                break;
+              case "unit":
+                value_f = format_unit(value, config.settings);
+                min_f = format_unit(min, config.settings);
+                max_f = format_unit(max, config.settings);
+                break;
+              case "decimal":
+                value_f = format_number(value, config.settings);
+                min_f = format_number(min, config.settings);
+                max_f = format_number(max, config.settings);
+                break;
+            }
+          }
+
           let svg = d3.select(`#${nodeID}`)
             .select("svg");
 
-          svg.select("title").text(config.title);
-          svg.select("desc").text(config.desc);
+          svg.select("desc")
+            .text(config.desc.concat(
+              config.minText,
+              min_f, ". ",
+              config.maxText,
+              max_f, ". ",
+              config.valueText,
+              value_f, ". ",
+              value_footnote
+            ));
 
-
-          let [value, min, max] = calculateGaugeValues(data, config);
           let gaugeData;
 
           if (value !== "NA") {
@@ -3256,40 +3523,15 @@ var colorbrewer = {YlGn: {
             .style("stroke", function (d) { return d.fill })
             .style("fill", function (d) { return d.fill });
 
-          let value_footnote = getValueFootnote(value, min, max, config.settings.locale);
-
-          if (value !== "NA") {
-            switch (config.settings.number_format) {
-              case 'percent':
-                value = format_percent(value, config.settings);
-                min = format_percent(min, config.settings);
-                max = format_percent(max, config.settings);
-                break;
-              case "currency":
-                value = format_currency(value, config.settings);
-                min = format_currency(min, config.settings);
-                max = format_currency(max, config.settings);
-                break;
-              case "unit":
-                value = format_unit(value, config.settings);
-                min = format_unit(min, config.settings);
-                max = format_unit(max, config.settings);
-                break;
-              case "decimal":
-                value = format_number(value, config.settings);
-                min = format_number(min, config.settings);
-                max = format_number(max, config.settings);
-                break;
-            }
-          }
 
           svg.selectAll(".value-text")
-            .data([value])
+            .data([value_f])
             .join(function (enter) {
               return enter.append("text")
                 .attr("class", "value-text")
                 .attr("font-size", "18px")
                 .attr("text-anchor", "middle")
+                .style("fill","#000")
                 .text(d => d)
                 .call(shrink, config.innerRadius * 2);
             },
@@ -3301,7 +3543,7 @@ var colorbrewer = {YlGn: {
               })
 
           svg.select(".min-text")
-            .data([min ?? 0])
+            .data([min_f])
             .join(function (enter) {
               return enter.append("text")
                 .attr("class", "min-text")
@@ -3316,7 +3558,7 @@ var colorbrewer = {YlGn: {
               })
 
           svg.select(".max-text")
-            .data([max ?? 1])
+            .data([max_f])
             .join(function (enter) {
               return enter.append("text")
                 .attr("class", "max-text")
@@ -3374,13 +3616,24 @@ var colorbrewer = {YlGn: {
         gaugeConfig.outerRadius = Math.min(gaugeConfig.chartWidth, gaugeConfig.chartHeight) / 2;
         gaugeConfig.innerRadius = gaugeConfig.outerRadius * (0.6);   //innerRadius  = 0 gives a pie chart, 0 <innerRadius < outerRadius gives a donut chart
         gaugeConfig.transDur = 1000;
-        gaugeConfig.title = "A gauge visualization";
-        gaugeConfig.desc = "A gauge visualization";
+        gaugeConfig.settings = x.settings;
+        gaugeConfig.settings.locale = (x.settings.locale === "navigator.language") ? navigator.language : x.settings.locale;
+        gaugeConfig.settings.lang = gaugeConfig.settings.locale.split("-")[0].toLowerCase();
+        gaugeConfig.title = x.title;
+        if(["de","en","es","fr","it","nl","ru"].includes(gaugeConfig.lang)){
+          gaugeConfig.desc = gaugeAltText[gaugeConfig.settings.lang]["desc"];
+          gaugeConfig.minText = gaugeAltText[gaugeConfig.settings.lang]["min"];
+          gaugeConfig.maxText = gaugeAltText[gaugeConfig.settings.lang]["max"];
+          gaugeConfig.valueText = gaugeAltText[gaugeConfig.settings.lang]["value"];
+        } else {
+          gaugeConfig.desc = "";
+          gaugeConfig.minText = "";
+          gaugeConfig.maxText = "";
+          gaugeConfig.valueText = "";
+        }
         gaugeConfig.colourScale = d3.scaleThreshold()
           .domain(x.color_thresholds.domain)
           .range(x.color_thresholds.range);
-        gaugeConfig.settings = x.settings;
-        gaugeConfig.settings.locale = (x.settings.locale === "navigator.language") ? navigator.language : x.settings.locale;
         gaugeConfig.numerator = x.numerator;
         gaugeConfig.min = x.min;
         gaugeConfig.max = x.max;
@@ -5611,11 +5864,11 @@ cars are selected.</p>
 seamlessly integrate a summarized number within a paragraph of text,
 which can change as the filter options change.</p>
 <p>You have selected
-<span class="summaryTextSpan html-widget html-fill-item" id="htmlwidget-63b65a130bd68dafb1f8"></span> <script type="application/json" data-for="htmlwidget-63b65a130bd68dafb1f8">{"x":{"data":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"numerator":null,"settings":{"statistic":"count","locale":"navigator.language","digits":0,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedData4e22af68","number_format":"decimal","signDisplay":"auto","currency":null,"unit":null,"quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
+<span class="summaryNumberSpan html-widget html-fill-item" id="htmlwidget-3c1c77e61b0934d74cc4"></span><script type="application/json" data-for="htmlwidget-3c1c77e61b0934d74cc4">{"x":{"data":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"numerator":null,"settings":{"statistic":"count","locale":"navigator.language","digits":0,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedDatae5dd75b6","number_format":"decimal","signDisplay":"auto","currency":null,"unit":null,"quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
 cars with an average mpg of
-<span class="summaryTextSpan html-widget html-fill-item" id="htmlwidget-6d961d69c628c965cb77"></span> <script type="application/json" data-for="htmlwidget-6d961d69c628c965cb77">{"x":{"data":[21,21,22.8,21.4,18.7,18.1,14.3,24.4,22.8,19.2,17.8,16.4,17.3,15.2,10.4,10.4,14.7,32.4,30.4,33.9,21.5,15.5,15.2,13.3,19.2,27.3,26,30.4,15.8,19.7,15,21.4],"numerator":null,"settings":{"statistic":"mean","locale":"navigator.language","digits":1,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedData4e22af68","number_format":"unit","signDisplay":"auto","currency":null,"unit":"mile-per-gallon","quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>.
+<span class="summaryNumberSpan html-widget html-fill-item" id="htmlwidget-ce1b06180988191041bf"></span><script type="application/json" data-for="htmlwidget-ce1b06180988191041bf">{"x":{"data":[21,21,22.8,21.4,18.7,18.1,14.3,24.4,22.8,19.2,17.8,16.4,17.3,15.2,10.4,10.4,14.7,32.4,30.4,33.9,21.5,15.5,15.2,13.3,19.2,27.3,26,30.4,15.8,19.7,15,21.4],"numerator":null,"settings":{"statistic":"mean","locale":"navigator.language","digits":1,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedDatae5dd75b6","number_format":"unit","signDisplay":"auto","currency":null,"unit":"mile-per-gallon","quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>.
 Of the selected cars,
-<span class="summaryTextSpan html-widget html-fill-item" id="htmlwidget-503bb63d0c10adcf7b19"></span> <script type="application/json" data-for="htmlwidget-503bb63d0c10adcf7b19">{"x":{"data":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"numerator":["Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird"],"settings":{"statistic":"pct_total","locale":"navigator.language","digits":0,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedData4e22af68","number_format":"percent","signDisplay":"auto","currency":null,"unit":null,"quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
+<span class="summaryNumberSpan html-widget html-fill-item" id="htmlwidget-816c77c92866a163104d"></span><script type="application/json" data-for="htmlwidget-816c77c92866a163104d">{"x":{"data":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"numerator":["Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird"],"settings":{"statistic":"pct_total","locale":"navigator.language","digits":0,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedDatae5dd75b6","number_format":"percent","signDisplay":"auto","currency":null,"unit":null,"quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
 are automatic.</p>
 </div>
 </div>
@@ -5646,7 +5899,7 @@ are automatic.</p>
     "6": ["Mazda RX4", "Mazda RX4 Wag", "Hornet 4 Drive", "Valiant", "Merc 280", "Merc 280C", "Ferrari Dino"],
     "8": ["Hornet Sportabout", "Duster 360", "Merc 450SE", "Merc 450SL", "Merc 450SLC", "Cadillac Fleetwood", "Lincoln Continental", "Chrysler Imperial", "Dodge Challenger", "AMC Javelin", "Camaro Z28", "Pontiac Firebird", "Ford Pantera L", "Maserati Bora"]
   },
-  "group": ["SharedData4e22af68"]
+  "group": ["SharedDatae5dd75b6"]
 }</script>
 </div>
 <div class="form-group crosstalk-input crosstalk-input-slider js-range-slider" id="hp" style="width: 100%;">
@@ -5655,7 +5908,7 @@ are automatic.</p>
 <script type="application/json" data-for="hp">{
   "values": [52, 62, 65, 66, 66, 91, 93, 95, 97, 105, 109, 110, 110, 110, 113, 123, 123, 150, 150, 175, 175, 175, 180, 180, 180, 205, 215, 230, 245, 245, 264, 335],
   "keys": ["Honda Civic", "Merc 240D", "Toyota Corolla", "Fiat 128", "Fiat X1-9", "Porsche 914-2", "Datsun 710", "Merc 230", "Toyota Corona", "Valiant", "Volvo 142E", "Mazda RX4", "Mazda RX4 Wag", "Hornet 4 Drive", "Lotus Europa", "Merc 280", "Merc 280C", "Dodge Challenger", "AMC Javelin", "Hornet Sportabout", "Pontiac Firebird", "Ferrari Dino", "Merc 450SE", "Merc 450SL", "Merc 450SLC", "Cadillac Fleetwood", "Lincoln Continental", "Chrysler Imperial", "Duster 360", "Camaro Z28", "Ford Pantera L", "Maserati Bora"],
-  "group": ["SharedData4e22af68"]
+  "group": ["SharedDatae5dd75b6"]
 }</script>
 </div>
 </div>
@@ -5676,8 +5929,8 @@ this valuebox is set to show no icon, but include caption.</p>
 <div class="knitr-options" data-fig-width="576" data-fig-height="460">
 
 </div>
-<div class="summaryValueBox html-widget html-fill-item" id="htmlwidget-339553dbdd9e9eebfff4" style="width:576px;height:460.8px;"></div>
-<script type="application/json" data-for="htmlwidget-339553dbdd9e9eebfff4">{"x":{"data":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"numerator":null,"color_thresholds":{"domain":"Number.NEGATIVE_INFINITY","range":["black","gold"],"text_range":["white","black"],"icon_range":["#3B3B3B","#BA9C00"]},"caption":"Cars selected","icon":false,"settings":{"statistic":"count","locale":"navigator.language","digits":0,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedData4e22af68","number_format":"decimal","signDisplay":"auto","currency":null,"unit":null,"quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
+<div class="summaryValueBox html-widget html-fill-item" id="htmlwidget-8176e9349653a3d5acdc" style="width:576px;height:460.8px;"></div>
+<script type="application/json" data-for="htmlwidget-8176e9349653a3d5acdc">{"x":{"data":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"numerator":null,"color_thresholds":{"domain":"Number.NEGATIVE_INFINITY","range":["black","gold"],"text_range":["white","black"],"icon_range":["#3B3B3B","#BA9C00"]},"caption":"Cars selected","icon":false,"settings":{"statistic":"count","locale":"navigator.language","digits":0,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedDatae5dd75b6","number_format":"decimal","signDisplay":"auto","currency":null,"unit":null,"quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 <div id="percentage-of-automatic-cars" class="section level3">
@@ -5694,8 +5947,8 @@ caption.</p>
 <div class="knitr-options" data-fig-width="576" data-fig-height="460">
 
 </div>
-<div class="summaryValueBox html-widget html-fill-item" id="htmlwidget-5b30e349d84c10409abd" style="width:576px;height:460.8px;"></div>
-<script type="application/json" data-for="htmlwidget-5b30e349d84c10409abd">{"x":{"data":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"numerator":["Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird"],"color_thresholds":{"domain":"Number.NEGATIVE_INFINITY","range":["black","gold"],"text_range":["white","black"],"icon_range":["#3B3B3B","#BA9C00"]},"caption":null,"icon":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\" class=\"bi bi-car-front-fill \" style=\"height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;\" aria-hidden=\"true\" role=\"img\" ><path d=\"M2.52 3.515A2.5 2.5 0 0 1 4.82 2h6.362c1 0 1.904.596 2.298 1.515l.792 1.848c.075.175.21.319.38.404.5.25.855.715.965 1.262l.335 1.679c.033.161.049.325.049.49v.413c0 .814-.39 1.543-1 1.997V13.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1.338c-1.292.048-2.745.088-4 .088s-2.708-.04-4-.088V13.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1.892c-.61-.454-1-1.183-1-1.997v-.413a2.5 2.5 0 0 1 .049-.49l.335-1.68c.11-.546.465-1.012.964-1.261a.807.807 0 0 0 .381-.404l.792-1.848ZM3 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm10 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM6 8a1 1 0 0 0 0 2h4a1 1 0 1 0 0-2H6ZM2.906 5.189a.51.51 0 0 0 .497.731c.91-.073 3.35-.17 4.597-.17 1.247 0 3.688.097 4.597.17a.51.51 0 0 0 .497-.731l-.956-1.913A.5.5 0 0 0 11.691 3H4.309a.5.5 0 0 0-.447.276L2.906 5.19Z\"><\/path><\/svg>","settings":{"statistic":"pct_total","locale":"navigator.language","digits":0,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedData4e22af68","number_format":"percent","signDisplay":"auto","currency":null,"unit":null,"quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
+<div class="summaryValueBox html-widget html-fill-item" id="htmlwidget-6cf7fde40eabc56c0588" style="width:576px;height:460.8px;"></div>
+<script type="application/json" data-for="htmlwidget-6cf7fde40eabc56c0588">{"x":{"data":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"numerator":["Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird"],"color_thresholds":{"domain":"Number.NEGATIVE_INFINITY","range":["black","gold"],"text_range":["white","black"],"icon_range":["#3B3B3B","#BA9C00"]},"caption":null,"icon":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\" class=\"bi bi-car-front-fill \" style=\"height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;\" aria-hidden=\"true\" role=\"img\" ><path d=\"M2.52 3.515A2.5 2.5 0 0 1 4.82 2h6.362c1 0 1.904.596 2.298 1.515l.792 1.848c.075.175.21.319.38.404.5.25.855.715.965 1.262l.335 1.679c.033.161.049.325.049.49v.413c0 .814-.39 1.543-1 1.997V13.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1.338c-1.292.048-2.745.088-4 .088s-2.708-.04-4-.088V13.5a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5v-1.892c-.61-.454-1-1.183-1-1.997v-.413a2.5 2.5 0 0 1 .049-.49l.335-1.68c.11-.546.465-1.012.964-1.261a.807.807 0 0 0 .381-.404l.792-1.848ZM3 10a1 1 0 1 0 0-2 1 1 0 0 0 0 2Zm10 0a1 1 0 1 0 0-2 1 1 0 0 0 0 2ZM6 8a1 1 0 0 0 0 2h4a1 1 0 1 0 0-2H6ZM2.906 5.189a.51.51 0 0 0 .497.731c.91-.073 3.35-.17 4.597-.17 1.247 0 3.688.097 4.597.17a.51.51 0 0 0 .497-.731l-.956-1.913A.5.5 0 0 0 11.691 3H4.309a.5.5 0 0 0-.447.276L2.906 5.19Z\"><\/path><\/svg>","settings":{"statistic":"pct_total","locale":"navigator.language","digits":0,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedDatae5dd75b6","number_format":"percent","signDisplay":"auto","currency":null,"unit":null,"quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 <div id="median-miles-per-gallon" class="section level3">
@@ -5715,8 +5968,8 @@ mpg, and teal if the value is over 20).</p>
 <div class="knitr-options" data-fig-width="576" data-fig-height="460">
 
 </div>
-<div class="summaryValueBox html-widget html-fill-item" id="htmlwidget-d25fb39961383421931b" style="width:576px;height:460.8px;"></div>
-<script type="application/json" data-for="htmlwidget-d25fb39961383421931b">{"x":{"data":[21,21,22.8,21.4,18.7,18.1,14.3,24.4,22.8,19.2,17.8,16.4,17.3,15.2,10.4,10.4,14.7,32.4,30.4,33.9,21.5,15.5,15.2,13.3,19.2,27.3,26,30.4,15.8,19.7,15,21.4],"numerator":null,"color_thresholds":{"domain":20,"range":["#6a0032","#036064"],"text_range":["white","white"],"icon_range":["#BE005F","#038B91"]},"caption":"Showing median value, can be adapted to other quantiles","icon":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\" class=\"bi bi-speedometer \" style=\"height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;\" aria-hidden=\"true\" role=\"img\" ><path d=\"M8 2a.5.5 0 0 1 .5.5V4a.5.5 0 0 1-1 0V2.5A.5.5 0 0 1 8 2zM3.732 3.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707zM2 8a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 8zm9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5zm.754-4.246a.389.389 0 0 0-.527-.02L7.547 7.31A.91.91 0 1 0 8.85 8.569l3.434-4.297a.389.389 0 0 0-.029-.518z\"><\/path>\n<path fill-rule=\"evenodd\" d=\"M6.664 15.889A8 8 0 1 1 9.336.11a8 8 0 0 1-2.672 15.78zm-4.665-4.283A11.945 11.945 0 0 1 8 10c2.186 0 4.236.585 6.001 1.606a7 7 0 1 0-12.002 0z\"><\/path><\/svg>","settings":{"statistic":"quantile","locale":"navigator.language","digits":1,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedData4e22af68","number_format":"unit","signDisplay":"auto","currency":null,"unit":"mile-per-gallon","quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
+<div class="summaryValueBox html-widget html-fill-item" id="htmlwidget-e8a4b1bbdba17ec43985" style="width:576px;height:460.8px;"></div>
+<script type="application/json" data-for="htmlwidget-e8a4b1bbdba17ec43985">{"x":{"data":[21,21,22.8,21.4,18.7,18.1,14.3,24.4,22.8,19.2,17.8,16.4,17.3,15.2,10.4,10.4,14.7,32.4,30.4,33.9,21.5,15.5,15.2,13.3,19.2,27.3,26,30.4,15.8,19.7,15,21.4],"numerator":null,"color_thresholds":{"domain":20,"range":["#6a0032","#036064"],"text_range":["white","white"],"icon_range":["#BE005F","#038B91"]},"caption":"Showing median value, can be adapted to other quantiles","icon":"<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 16 16\" class=\"bi bi-speedometer \" style=\"height:1em;width:1em;fill:currentColor;vertical-align:-0.125em;\" aria-hidden=\"true\" role=\"img\" ><path d=\"M8 2a.5.5 0 0 1 .5.5V4a.5.5 0 0 1-1 0V2.5A.5.5 0 0 1 8 2zM3.732 3.732a.5.5 0 0 1 .707 0l.915.914a.5.5 0 1 1-.708.708l-.914-.915a.5.5 0 0 1 0-.707zM2 8a.5.5 0 0 1 .5-.5h1.586a.5.5 0 0 1 0 1H2.5A.5.5 0 0 1 2 8zm9.5 0a.5.5 0 0 1 .5-.5h1.5a.5.5 0 0 1 0 1H12a.5.5 0 0 1-.5-.5zm.754-4.246a.389.389 0 0 0-.527-.02L7.547 7.31A.91.91 0 1 0 8.85 8.569l3.434-4.297a.389.389 0 0 0-.029-.518z\"><\/path>\n<path fill-rule=\"evenodd\" d=\"M6.664 15.889A8 8 0 1 1 9.336.11a8 8 0 0 1-2.672 15.78zm-4.665-4.283A11.945 11.945 0 0 1 8 10c2.186 0 4.236.585 6.001 1.606a7 7 0 1 0-12.002 0z\"><\/path><\/svg>","settings":{"statistic":"quantile","locale":"navigator.language","digits":1,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedDatae5dd75b6","number_format":"unit","signDisplay":"auto","currency":null,"unit":"mile-per-gallon","quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 </div>
@@ -5749,15 +6002,15 @@ screen sizes.</p>
 <div class="col-xs-6">
 <div>
 <h5 style="margin-left: 15px">Percentage of selected cars which are automatic transmisison</h5>
-<div id="htmlwidget-2490f3a4736b4418a190" style="width:960px;height:200px;" class="summaryGauge html-widget"></div>
-<script type="application/json" data-for="htmlwidget-2490f3a4736b4418a190">{"x":{"data":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"numerator":["Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird"],"min":0.33,"max":0.66,"color_thresholds":{"domain":"Number.NEGATIVE_INFINITY","range":["black","gold"]},"settings":{"statistic":"pct_total","locale":"navigator.language","digits":0,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedData4e22af68","number_format":"percent","signDisplay":"auto","currency":null,"unit":null,"quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
+<div id="htmlwidget-ce02252e440152f8e207" style="width:960px;height:200px;" class="summaryGauge html-widget"></div>
+<script type="application/json" data-for="htmlwidget-ce02252e440152f8e207">{"x":{"data":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"numerator":["Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird"],"min":0.33,"max":0.66,"color_thresholds":{"domain":"Number.NEGATIVE_INFINITY","range":["black","gold"]},"settings":{"statistic":"pct_total","locale":"navigator.language","digits":0,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedDatae5dd75b6","number_format":"percent","signDisplay":"auto","currency":null,"unit":null,"quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 <div class="col-xs-6">
 <div>
 <h5 style="margin-left: 15px">Average quarter mile time (in seconds)</h5>
-<div id="htmlwidget-42b6f218c04eb286574e" style="width:960px;height:200px;" class="summaryGauge html-widget"></div>
-<script type="application/json" data-for="htmlwidget-42b6f218c04eb286574e">{"x":{"data":[16.46,17.02,18.61,19.44,17.02,20.22,15.84,20,22.9,18.3,18.9,17.4,17.6,18,17.98,17.82,17.42,19.47,18.52,19.9,20.01,16.87,17.3,15.41,17.05,18.9,16.7,16.9,14.5,15.5,14.6,18.6],"numerator":null,"min":14.5,"max":22.9,"color_thresholds":{"domain":["Number.NEGATIVE_INFINITY","0","15","17","19","21"],"range":["#444","#264653","#2a9d8f","#e9c46a","#f4a261","#e76f51","#d62828"]},"settings":{"statistic":"mean","locale":"navigator.language","digits":1,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedData4e22af68","number_format":"unit","signDisplay":"auto","currency":null,"unit":"second","quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
+<div id="htmlwidget-6262e5f991930b2fffa9" style="width:960px;height:200px;" class="summaryGauge html-widget"></div>
+<script type="application/json" data-for="htmlwidget-6262e5f991930b2fffa9">{"x":{"data":[16.46,17.02,18.61,19.44,17.02,20.22,15.84,20,22.9,18.3,18.9,17.4,17.6,18,17.98,17.82,17.42,19.47,18.52,19.9,20.01,16.87,17.3,15.41,17.05,18.9,16.7,16.9,14.5,15.5,14.6,18.6],"numerator":null,"min":14.5,"max":22.9,"color_thresholds":{"domain":["Number.NEGATIVE_INFINITY","0","15","17","19","21"],"range":["#444","#264653","#2a9d8f","#e9c46a","#f4a261","#e76f51","#d62828"]},"settings":{"statistic":"mean","locale":"navigator.language","digits":1,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedDatae5dd75b6","number_format":"unit","signDisplay":"auto","currency":null,"unit":"second","quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 </div>
@@ -5780,8 +6033,8 @@ greater than 80%.</p>
 <div class="knitr-options" data-fig-width="576" data-fig-height="460">
 
 </div>
-<div class="summaryGauge html-widget html-fill-item" id="htmlwidget-239c401defc43334d2f3" style="width:576px;height:460.8px;"></div>
-<script type="application/json" data-for="htmlwidget-239c401defc43334d2f3">{"x":{"data":[110,110,93,110,175,105,245,62,95,123,123,180,180,180,205,215,230,66,52,65,97,150,150,245,175,66,91,113,264,175,335,109],"numerator":[110,175,105,245,62,95,123,123,180,180,180,205,215,230,97,150,150,245,175],"min":null,"max":null,"color_thresholds":{"domain":[0.5,0.8],"range":["red","gold","mediumseagreen"]},"settings":{"statistic":"sum_pct_total","locale":"navigator.language","digits":0,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedData4e22af68","number_format":"percent","signDisplay":"auto","currency":null,"unit":null,"quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
+<div class="summaryGauge html-widget html-fill-item" id="htmlwidget-ff0b05d2fa0d84122647" style="width:576px;height:460.8px;"></div>
+<script type="application/json" data-for="htmlwidget-ff0b05d2fa0d84122647">{"x":{"data":[110,110,93,110,175,105,245,62,95,123,123,180,180,180,205,215,230,66,52,65,97,150,150,245,175,66,91,113,264,175,335,109],"numerator":[110,175,105,245,62,95,123,123,180,180,180,205,215,230,97,150,150,245,175],"min":null,"max":null,"color_thresholds":{"domain":[0.5,0.8],"range":["red","gold","mediumseagreen"]},"settings":{"statistic":"sum_pct_total","locale":"navigator.language","digits":0,"crosstalk_key":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalk_group":"SharedDatae5dd75b6","number_format":"percent","signDisplay":"auto","currency":null,"unit":null,"quantile":0.5,"notation":"standard"}},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 </div>
@@ -5796,8 +6049,8 @@ criteria.</p>
 <div class="knitr-options" data-fig-width="576" data-fig-height="460">
 
 </div>
-<div class="reactable html-widget html-fill-item" id="htmlwidget-259fb3e9799b0950a3bf" style="width:auto;height:auto;"></div>
-<script type="application/json" data-for="htmlwidget-259fb3e9799b0950a3bf">{"x":{"tag":{"name":"Reactable","attribs":{"data":{".rownames":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"mpg":[21,21,22.8,21.4,18.7,18.1,14.3,24.4,22.8,19.2,17.8,16.4,17.3,15.2,10.4,10.4,14.7,32.4,30.4,33.9,21.5,15.5,15.2,13.3,19.2,27.3,26,30.4,15.8,19.7,15,21.4],"cyl":[6,6,4,6,8,6,8,4,4,6,6,8,8,8,8,8,8,4,4,4,4,8,8,8,8,4,4,4,8,6,8,4],"hp":[110,110,93,110,175,105,245,62,95,123,123,180,180,180,205,215,230,66,52,65,97,150,150,245,175,66,91,113,264,175,335,109],"wt":[2.62,2.875,2.32,3.215,3.44,3.46,3.57,3.19,3.15,3.44,3.44,4.07,3.73,3.78,5.25,5.424,5.345,2.2,1.615,1.835,2.465,3.52,3.435,3.84,3.845,1.935,2.14,1.513,3.17,2.77,3.57,2.78],"qsec":[16.46,17.02,18.61,19.44,17.02,20.22,15.84,20,22.9,18.3,18.9,17.4,17.6,18,17.98,17.82,17.42,19.47,18.52,19.9,20.01,16.87,17.3,15.41,17.05,18.9,16.7,16.9,14.5,15.5,14.6,18.6],"am":[1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1]},"columns":[{"id":".rownames","name":"","type":"character","footer":"Average","align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"},"sortable":false,"filterable":false,"rowHeader":true},{"id":"mpg","name":"Miles per gallon","type":"numeric","footer":{"name":"WidgetContainer","attribs":{"key":"4375adc8a35673a0a2d9fd736b3d6c58"},"children":[{"name":"Fragment","attribs":[],"children":[{"name":"span","attribs":{"id":"htmlwidget-1a26f4b6cdf87aef7299","className":"summaryTextSpan html-widget html-fill-item"},"children":[]},{"name":"script","attribs":{"type":"application/json","data-for":"htmlwidget-1a26f4b6cdf87aef7299"},"children":["{\"x\":{\"data\":[21,21,22.8,21.4,18.7,18.1,14.3,24.4,22.8,19.2,17.8,16.4,17.3,15.2,10.4,10.4,14.7,32.4,30.4,33.9,21.5,15.5,15.2,13.3,19.2,27.3,26,30.4,15.8,19.7,15,21.4],\"numerator\":null,\"settings\":{\"statistic\":\"mean\",\"locale\":\"navigator.language\",\"digits\":1,\"crosstalk_key\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"crosstalk_group\":\"SharedData4e22af68\",\"number_format\":\"unit\",\"signDisplay\":\"auto\",\"currency\":null,\"unit\":\"mile-per-gallon\",\"quantile\":0.5,\"notation\":\"standard\"}},\"evals\":[],\"jsHooks\":[]}"]}]}]},"align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"}},{"id":"cyl","name":"Number of cylinders","type":"numeric","footer":{"name":"WidgetContainer","attribs":{"key":"8d809c8e8a8f6eb626eb4c534282b932"},"children":[{"name":"Fragment","attribs":[],"children":[{"name":"span","attribs":{"id":"htmlwidget-232108ca14fc48868baa","className":"summaryTextSpan html-widget html-fill-item"},"children":[]},{"name":"script","attribs":{"type":"application/json","data-for":"htmlwidget-232108ca14fc48868baa"},"children":["{\"x\":{\"data\":[6,6,4,6,8,6,8,4,4,6,6,8,8,8,8,8,8,4,4,4,4,8,8,8,8,4,4,4,8,6,8,4],\"numerator\":null,\"settings\":{\"statistic\":\"mean\",\"locale\":\"navigator.language\",\"digits\":0,\"crosstalk_key\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"crosstalk_group\":\"SharedData4e22af68\",\"number_format\":\"decimal\",\"signDisplay\":\"auto\",\"currency\":null,\"unit\":null,\"quantile\":0.5,\"notation\":\"standard\"}},\"evals\":[],\"jsHooks\":[]}"]}]}]},"align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"}},{"id":"hp","name":"Gross horsepower","type":"numeric","footer":{"name":"WidgetContainer","attribs":{"key":"53aa8b536035ef2be17fecfe5db535fa"},"children":[{"name":"Fragment","attribs":[],"children":[{"name":"span","attribs":{"id":"htmlwidget-5ec3d429aca8bdaaba50","className":"summaryTextSpan html-widget html-fill-item"},"children":[]},{"name":"script","attribs":{"type":"application/json","data-for":"htmlwidget-5ec3d429aca8bdaaba50"},"children":["{\"x\":{\"data\":[110,110,93,110,175,105,245,62,95,123,123,180,180,180,205,215,230,66,52,65,97,150,150,245,175,66,91,113,264,175,335,109],\"numerator\":null,\"settings\":{\"statistic\":\"mean\",\"locale\":\"navigator.language\",\"digits\":0,\"crosstalk_key\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"crosstalk_group\":\"SharedData4e22af68\",\"number_format\":\"decimal\",\"signDisplay\":\"auto\",\"currency\":null,\"unit\":null,\"quantile\":0.5,\"notation\":\"standard\"}},\"evals\":[],\"jsHooks\":[]}"]}]}]},"align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"}},{"id":"wt","name":"Weight (x1000 lbs)","type":"numeric","footer":{"name":"WidgetContainer","attribs":{"key":"000eb20a540d34e0989458408960c659"},"children":[{"name":"Fragment","attribs":[],"children":[{"name":"span","attribs":{"id":"htmlwidget-9ef9e248a9b5c2a4fe5a","className":"summaryTextSpan html-widget html-fill-item"},"children":[]},{"name":"script","attribs":{"type":"application/json","data-for":"htmlwidget-9ef9e248a9b5c2a4fe5a"},"children":["{\"x\":{\"data\":[2.62,2.875,2.32,3.215,3.44,3.46,3.57,3.19,3.15,3.44,3.44,4.07,3.73,3.78,5.25,5.424,5.345,2.2,1.615,1.835,2.465,3.52,3.435,3.84,3.845,1.935,2.14,1.513,3.17,2.77,3.57,2.78],\"numerator\":null,\"settings\":{\"statistic\":\"mean\",\"locale\":\"navigator.language\",\"digits\":2,\"crosstalk_key\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"crosstalk_group\":\"SharedData4e22af68\",\"number_format\":\"unit\",\"signDisplay\":\"auto\",\"currency\":null,\"unit\":\"pound\",\"quantile\":0.5,\"notation\":\"standard\"}},\"evals\":[],\"jsHooks\":[]}"]}]}]},"align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"}},{"id":"qsec","name":"Quarter mile time","type":"numeric","footer":{"name":"WidgetContainer","attribs":{"key":"18203df203069b336fc75338db210ce0"},"children":[{"name":"Fragment","attribs":[],"children":[{"name":"span","attribs":{"id":"htmlwidget-ce56d87733358a2871c2","className":"summaryTextSpan html-widget html-fill-item"},"children":[]},{"name":"script","attribs":{"type":"application/json","data-for":"htmlwidget-ce56d87733358a2871c2"},"children":["{\"x\":{\"data\":[16.46,17.02,18.61,19.44,17.02,20.22,15.84,20,22.9,18.3,18.9,17.4,17.6,18,17.98,17.82,17.42,19.47,18.52,19.9,20.01,16.87,17.3,15.41,17.05,18.9,16.7,16.9,14.5,15.5,14.6,18.6],\"numerator\":null,\"settings\":{\"statistic\":\"mean\",\"locale\":\"navigator.language\",\"digits\":2,\"crosstalk_key\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"crosstalk_group\":\"SharedData4e22af68\",\"number_format\":\"unit\",\"signDisplay\":\"auto\",\"currency\":null,\"unit\":\"second\",\"quantile\":0.5,\"notation\":\"standard\"}},\"evals\":[],\"jsHooks\":[]}"]}]}]},"align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"}},{"id":"am","name":"Automatic? (0 = Automatic)","type":"numeric","footer":{"name":"WidgetContainer","attribs":{"key":"5eab79180f26b429895c9e46d9108f74"},"children":[{"name":"Fragment","attribs":[],"children":[{"name":"span","attribs":{"id":"htmlwidget-ef011ebeef644325f2b3","className":"summaryTextSpan html-widget html-fill-item"},"children":[]},{"name":"script","attribs":{"type":"application/json","data-for":"htmlwidget-ef011ebeef644325f2b3"},"children":["{\"x\":{\"data\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"numerator\":[\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\"],\"settings\":{\"statistic\":\"pct_total\",\"locale\":\"navigator.language\",\"digits\":0,\"crosstalk_key\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"crosstalk_group\":\"SharedData4e22af68\",\"number_format\":\"percent\",\"signDisplay\":\"auto\",\"currency\":null,\"unit\":null,\"quantile\":0.5,\"notation\":\"standard\"}},\"evals\":[],\"jsHooks\":[]}"]}]}]},"align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"}}],"highlight":true,"bordered":true,"striped":true,"crosstalkKey":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalkGroup":"SharedData4e22af68","dataKey":"81cfe02444a39a7404d5e504d0274b93"},"children":[]},"class":"reactR_markup"},"evals":[],"jsHooks":[]}</script>
+<div class="reactable html-widget html-fill-item" id="htmlwidget-b021b6d8a08162c32ecd" style="width:auto;height:auto;"></div>
+<script type="application/json" data-for="htmlwidget-b021b6d8a08162c32ecd">{"x":{"tag":{"name":"Reactable","attribs":{"data":{".rownames":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"mpg":[21,21,22.8,21.4,18.7,18.1,14.3,24.4,22.8,19.2,17.8,16.4,17.3,15.2,10.4,10.4,14.7,32.4,30.4,33.9,21.5,15.5,15.2,13.3,19.2,27.3,26,30.4,15.8,19.7,15,21.4],"cyl":[6,6,4,6,8,6,8,4,4,6,6,8,8,8,8,8,8,4,4,4,4,8,8,8,8,4,4,4,8,6,8,4],"hp":[110,110,93,110,175,105,245,62,95,123,123,180,180,180,205,215,230,66,52,65,97,150,150,245,175,66,91,113,264,175,335,109],"wt":[2.62,2.875,2.32,3.215,3.44,3.46,3.57,3.19,3.15,3.44,3.44,4.07,3.73,3.78,5.25,5.424,5.345,2.2,1.615,1.835,2.465,3.52,3.435,3.84,3.845,1.935,2.14,1.513,3.17,2.77,3.57,2.78],"qsec":[16.46,17.02,18.61,19.44,17.02,20.22,15.84,20,22.9,18.3,18.9,17.4,17.6,18,17.98,17.82,17.42,19.47,18.52,19.9,20.01,16.87,17.3,15.41,17.05,18.9,16.7,16.9,14.5,15.5,14.6,18.6],"am":[1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,1,1,1,1,1,1,1]},"columns":[{"id":".rownames","name":"","type":"character","footer":"Average","align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"},"sortable":false,"filterable":false,"rowHeader":true},{"id":"mpg","name":"Miles per gallon","type":"numeric","footer":{"name":"WidgetContainer","attribs":{"key":"8c82ea5c9254b855d1788591e11d6d9f"},"children":[{"name":"Fragment","attribs":[],"children":[{"name":"span","attribs":{"id":"htmlwidget-65d02c86181dfa5d076a","className":"summaryNumberSpan html-widget html-fill-item"},"children":[],".noWS":"outside"},{"name":"script","attribs":{"type":"application/json","data-for":"htmlwidget-65d02c86181dfa5d076a"},"children":["{\"x\":{\"data\":[21,21,22.8,21.4,18.7,18.1,14.3,24.4,22.8,19.2,17.8,16.4,17.3,15.2,10.4,10.4,14.7,32.4,30.4,33.9,21.5,15.5,15.2,13.3,19.2,27.3,26,30.4,15.8,19.7,15,21.4],\"numerator\":null,\"settings\":{\"statistic\":\"mean\",\"locale\":\"navigator.language\",\"digits\":1,\"crosstalk_key\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"crosstalk_group\":\"SharedDatae5dd75b6\",\"number_format\":\"unit\",\"signDisplay\":\"auto\",\"currency\":null,\"unit\":\"mile-per-gallon\",\"quantile\":0.5,\"notation\":\"standard\"}},\"evals\":[],\"jsHooks\":[]}"]}]}]},"align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"}},{"id":"cyl","name":"Number of cylinders","type":"numeric","footer":{"name":"WidgetContainer","attribs":{"key":"d37c96128fda554a60aa75111ee0072b"},"children":[{"name":"Fragment","attribs":[],"children":[{"name":"span","attribs":{"id":"htmlwidget-2cb9e73f671e718d7aa2","className":"summaryNumberSpan html-widget html-fill-item"},"children":[],".noWS":"outside"},{"name":"script","attribs":{"type":"application/json","data-for":"htmlwidget-2cb9e73f671e718d7aa2"},"children":["{\"x\":{\"data\":[6,6,4,6,8,6,8,4,4,6,6,8,8,8,8,8,8,4,4,4,4,8,8,8,8,4,4,4,8,6,8,4],\"numerator\":null,\"settings\":{\"statistic\":\"mean\",\"locale\":\"navigator.language\",\"digits\":0,\"crosstalk_key\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"crosstalk_group\":\"SharedDatae5dd75b6\",\"number_format\":\"decimal\",\"signDisplay\":\"auto\",\"currency\":null,\"unit\":null,\"quantile\":0.5,\"notation\":\"standard\"}},\"evals\":[],\"jsHooks\":[]}"]}]}]},"align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"}},{"id":"hp","name":"Gross horsepower","type":"numeric","footer":{"name":"WidgetContainer","attribs":{"key":"0573d282530fc08d69a3427e0fe9ba61"},"children":[{"name":"Fragment","attribs":[],"children":[{"name":"span","attribs":{"id":"htmlwidget-e8f58c7b975dc3b2d18c","className":"summaryNumberSpan html-widget html-fill-item"},"children":[],".noWS":"outside"},{"name":"script","attribs":{"type":"application/json","data-for":"htmlwidget-e8f58c7b975dc3b2d18c"},"children":["{\"x\":{\"data\":[110,110,93,110,175,105,245,62,95,123,123,180,180,180,205,215,230,66,52,65,97,150,150,245,175,66,91,113,264,175,335,109],\"numerator\":null,\"settings\":{\"statistic\":\"mean\",\"locale\":\"navigator.language\",\"digits\":0,\"crosstalk_key\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"crosstalk_group\":\"SharedDatae5dd75b6\",\"number_format\":\"decimal\",\"signDisplay\":\"auto\",\"currency\":null,\"unit\":null,\"quantile\":0.5,\"notation\":\"standard\"}},\"evals\":[],\"jsHooks\":[]}"]}]}]},"align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"}},{"id":"wt","name":"Weight (x1000 lbs)","type":"numeric","footer":{"name":"WidgetContainer","attribs":{"key":"abf37e2108627cb54223f44b4b3b7b6c"},"children":[{"name":"Fragment","attribs":[],"children":[{"name":"span","attribs":{"id":"htmlwidget-624e26e483ad739202b1","className":"summaryNumberSpan html-widget html-fill-item"},"children":[],".noWS":"outside"},{"name":"script","attribs":{"type":"application/json","data-for":"htmlwidget-624e26e483ad739202b1"},"children":["{\"x\":{\"data\":[2.62,2.875,2.32,3.215,3.44,3.46,3.57,3.19,3.15,3.44,3.44,4.07,3.73,3.78,5.25,5.424,5.345,2.2,1.615,1.835,2.465,3.52,3.435,3.84,3.845,1.935,2.14,1.513,3.17,2.77,3.57,2.78],\"numerator\":null,\"settings\":{\"statistic\":\"mean\",\"locale\":\"navigator.language\",\"digits\":2,\"crosstalk_key\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"crosstalk_group\":\"SharedDatae5dd75b6\",\"number_format\":\"unit\",\"signDisplay\":\"auto\",\"currency\":null,\"unit\":\"pound\",\"quantile\":0.5,\"notation\":\"standard\"}},\"evals\":[],\"jsHooks\":[]}"]}]}]},"align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"}},{"id":"qsec","name":"Quarter mile time","type":"numeric","footer":{"name":"WidgetContainer","attribs":{"key":"86780ef61d9a20634a29426999775b46"},"children":[{"name":"Fragment","attribs":[],"children":[{"name":"span","attribs":{"id":"htmlwidget-ccaa6bf8f7897bdbd4cf","className":"summaryNumberSpan html-widget html-fill-item"},"children":[],".noWS":"outside"},{"name":"script","attribs":{"type":"application/json","data-for":"htmlwidget-ccaa6bf8f7897bdbd4cf"},"children":["{\"x\":{\"data\":[16.46,17.02,18.61,19.44,17.02,20.22,15.84,20,22.9,18.3,18.9,17.4,17.6,18,17.98,17.82,17.42,19.47,18.52,19.9,20.01,16.87,17.3,15.41,17.05,18.9,16.7,16.9,14.5,15.5,14.6,18.6],\"numerator\":null,\"settings\":{\"statistic\":\"mean\",\"locale\":\"navigator.language\",\"digits\":2,\"crosstalk_key\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"crosstalk_group\":\"SharedDatae5dd75b6\",\"number_format\":\"unit\",\"signDisplay\":\"auto\",\"currency\":null,\"unit\":\"second\",\"quantile\":0.5,\"notation\":\"standard\"}},\"evals\":[],\"jsHooks\":[]}"]}]}]},"align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"}},{"id":"am","name":"Automatic? (0 = Automatic)","type":"numeric","footer":{"name":"WidgetContainer","attribs":{"key":"c901cd546e1dd1a1b685c91702813051"},"children":[{"name":"Fragment","attribs":[],"children":[{"name":"span","attribs":{"id":"htmlwidget-bacf813c17cc3180b45d","className":"summaryNumberSpan html-widget html-fill-item"},"children":[],".noWS":"outside"},{"name":"script","attribs":{"type":"application/json","data-for":"htmlwidget-bacf813c17cc3180b45d"},"children":["{\"x\":{\"data\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"numerator\":[\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\"],\"settings\":{\"statistic\":\"pct_total\",\"locale\":\"navigator.language\",\"digits\":0,\"crosstalk_key\":[\"Mazda RX4\",\"Mazda RX4 Wag\",\"Datsun 710\",\"Hornet 4 Drive\",\"Hornet Sportabout\",\"Valiant\",\"Duster 360\",\"Merc 240D\",\"Merc 230\",\"Merc 280\",\"Merc 280C\",\"Merc 450SE\",\"Merc 450SL\",\"Merc 450SLC\",\"Cadillac Fleetwood\",\"Lincoln Continental\",\"Chrysler Imperial\",\"Fiat 128\",\"Honda Civic\",\"Toyota Corolla\",\"Toyota Corona\",\"Dodge Challenger\",\"AMC Javelin\",\"Camaro Z28\",\"Pontiac Firebird\",\"Fiat X1-9\",\"Porsche 914-2\",\"Lotus Europa\",\"Ford Pantera L\",\"Ferrari Dino\",\"Maserati Bora\",\"Volvo 142E\"],\"crosstalk_group\":\"SharedDatae5dd75b6\",\"number_format\":\"percent\",\"signDisplay\":\"auto\",\"currency\":null,\"unit\":null,\"quantile\":0.5,\"notation\":\"standard\"}},\"evals\":[],\"jsHooks\":[]}"]}]}]},"align":"center","headerStyle":{"background":"white"},"footerStyle":{"fontWeight":"bold"}}],"highlight":true,"bordered":true,"striped":true,"crosstalkKey":["Mazda RX4","Mazda RX4 Wag","Datsun 710","Hornet 4 Drive","Hornet Sportabout","Valiant","Duster 360","Merc 240D","Merc 230","Merc 280","Merc 280C","Merc 450SE","Merc 450SL","Merc 450SLC","Cadillac Fleetwood","Lincoln Continental","Chrysler Imperial","Fiat 128","Honda Civic","Toyota Corolla","Toyota Corona","Dodge Challenger","AMC Javelin","Camaro Z28","Pontiac Firebird","Fiat X1-9","Porsche 914-2","Lotus Europa","Ford Pantera L","Ferrari Dino","Maserati Bora","Volvo 142E"],"crosstalkGroup":"SharedDatae5dd75b6","dataKey":"b448ac6c5cb31c4c9338d16e0404d8e0"},"children":[]},"class":"reactR_markup"},"evals":[],"jsHooks":[]}</script>
 </div>
 </div>
 

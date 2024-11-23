@@ -1,40 +1,24 @@
-#' Show a single summary statistic in a text span
+#' Show a single value in a text span
 #'
-#' A `summaryTextSpan` displays a single statistic derived from a linked table.
+#' A `summaryTextSpan` displays a single value derived from a linked table.
 #' Its primary use is with the `crosstalk` package. Used with `crosstalk`,
 #' a `summaryTextSpan` displays a value which updates as the data selection
 #' changes.
 #'
 #' @param data Data to summarize, normally an instance of [crosstalk::SharedData].
-#' @param statistic The statistic to compute.
-#' Possible vales are `c("count", "sum", "mean","pct_total", "min","max")`.
+#' @param statistic The aggregation to perform.
+#' Possible vales are `c("count","first", "last", "min","max","mode", "concatenate", "unique")`.
+#' `first`, `last` and `concatenate` will select the value based on the index of the column passed to the function.
+#' `min` and `max` will selected the value based on either d3.ascending (default) or through the function passed to the parameter `sort`
 #' Count is the default.
 #' @param column For most statistics, the column of `data` to summarize.
-#' Not used for `"count"` or `"pct_total"` statistic.
-#' @param selection Expression to select a fixed subset of `data`. May be
-#' a logical vector or a one-sided formula that evaluates to a logical vector.
+#' Not used for `"count"`.
+#' @param selection Optional parameter. Expression to select a fixed subset of `data`. May be a logical vector or a one-sided formula that evaluates to a logical vector.
 #' If used, the `key` given to [crosstalk::SharedData] must be a fixed column (not row numbers).
-#' @param locale Control how the number is displayed. Valid strings include
+#' @param locale Optional parameter. For `count` and `unqiue` control how the number is displayed. Valid strings include
 #' a [IETF BCP 47 language tag](https://en.wikipedia.org/wiki/IETF_language_tag),
-#' or the string "navigator.language". Default value is "navigator.language"
-#' @param digits Number of decimal places to display, or NULL to display full precision.
-#' if number_format == `"percent"`, digits == `0` the statistics is 0.1234,
-#' the resulting visualization will show "12%".
-#' @param number_format The resulting type of number to display.
-#' Options are `c("decimal", "percent", "currency","unit")`. Decimal is the default.
-#' @param signDisplay How to display the sign for the number. Possible values are:
-#' `c("auto", "always","exceptZero","negative","never")`. Auto is the default
-#' @param currency A string containing an ISO 4217 currency code. No default value.
-#' [Full list is availble here](https://en.wikipedia.org/wiki/ISO_4217#List_of_ISO_4217_currency_codes)
-#' NOTE: If this value is not null, number_format will be reassigned to `"currency"`
-#' @param unit A string containing a valid unit identifier from [this list](https://tc39.es/ecma402/#table-sanctioned-single-unit-identifiers)
-#' Pairs of simple units can be concatenated with "-per-" to make a compound unit.
-#' NOTE: If this value is not null, number_format will be reassigned to `"unit"`
-#' @param quantile A number in `[0,1]`, specifying the quantile to use if statistic = "quantile". 
-#' The default number is 0.5 (i.e. median)
-#' @param notation How the number should be displayed.
-#' Possible vales are `c("standard", "scientific","engineering","compact")`.
-#' Standard is the default.
+#' @param delim Optional parameter. For concatenate, choose the joining string. Default is `", "`
+#' @param sort Optional parameter. A sort function used to sort the data to determine the min or max value or the order in which to concatenate the value.
 #' @param width Optional parameter. Fixed width for widget (in css units), which is passed to htmlwidgets::createWidget.
 #' @param height Optional parameter. Fixed height for widget (in css units), which is passed to htmlwidgets::createWidget.
 #' @param elementId Optional parameter. String used to define the element containing the widget, which is passed to htmlwidgets::createWidget.
@@ -44,17 +28,12 @@
 #'
 #' @export
 summaryTextSpan <- function(data,
-                            statistic = c("count", "sum", "mean", "pct_total", "sum_pct_total", "min", "max", "quantile"),
+                            statistic = c("count","first", "last", "min","max","mode", "concatenate","unique"),
                             column = NULL,
                             selection = NULL,
                             locale = "navigator.language",
-                            digits = 0,
-                            number_format = c("decimal", "percent", "currency", "unit"),
-                            signDisplay = c("auto", "always", "exceptZero", "negative", "never"),
-                            currency = NULL,
-                            unit = NULL,
-                            quantile = 0.5,
-                            notation = c("standard", "scientific", "engineering", "compact"),
+                            delim = ", ",
+                            sort = NULL,
                             width = NULL,
                             height = NULL,
                             elementId = NULL) {
@@ -71,55 +50,28 @@ summaryTextSpan <- function(data,
   }
 
   statistic <- match.arg(statistic)
-  number_format <- match.arg(number_format)
-  signDisplay <- match.arg(signDisplay)
-  notation <- match.arg(notation)
-  numerator <- NULL
+  sort <- match.arg(sort)
 
-  if (statistic %in% c("pct_total", "sum_pct_total")) {
-    # If selection is given in the context of pct_total, apply selection to count rows in the numerator
-    if (!is.null(selection)) {
-      # Evaluate any formula
-      if (inherits(selection, "formula")) {
-        if (length(selection) != 2L) {
-          stop("Unexpected two-sided formula: ", deparse(selection))
-        }
-        selection <- eval(selection[[2]], data, environment(selection))
+  # If selection is given, apply it
+  if (!is.null(selection)) {
+    # Evaluate any formula
+    if (inherits(selection, "formula")) {
+      if (length(selection) != 2L) {
+        stop("Unexpected two-sided formula: ", deparse(selection))
       }
-      if (!is.logical(selection)) {
-        stop("Selection must contain TRUE/FALSE values.")
-      }
-
-      numerator <- data[selection, ]
-      if (statistic == "pct_total") {
-        numerator <- row.names(numerator)
-      }
-    } else {
-      stop("When statistic is 'pct_total' or 'sum_pct_total', selection must be specified.")
+      selection <- eval(selection[[2]], data, environment(selection))
     }
-  } else {
-    # If selection is given, apply it
-    if (!is.null(selection)) {
-      # Evaluate any formula
-      if (inherits(selection, "formula")) {
-        if (length(selection) != 2L) {
-          stop("Unexpected two-sided formula: ", deparse(selection))
-        }
-        selection <- eval(selection[[2]], data, environment(selection))
-      }
-      if (!is.logical(selection)) {
-        stop("Selection must contain TRUE/FALSE values.")
-      }
-
-      data <- data[selection, ]
-      key <- key[selection]
+    if (!is.logical(selection)) {
+      stop("Selection must contain TRUE/FALSE values.")
     }
+    data <- data[selection, ]
+    key <- key[selection]
   }
 
 
   # We just need one column, either the row.names or the specified column.
   if (is.null(column)) {
-    if (!statistic %in% c("count", "pct_total")) {
+    if (!statistic != "count") {
       stop("Column must be provided with ", statistic, " statistic.")
     }
     data <- row.names(data)
@@ -128,31 +80,18 @@ summaryTextSpan <- function(data,
       stop("No ", column, " column in data.")
     }
     data <- data[[column]]
-
-    if (!is.null(numerator)){
-      numerator <- numerator[[column]]
-    }
   }
 
   # forward options using x
   x <- list(
     data = data,
-    numerator = get0("numerator"),
     settings = list(
       statistic = statistic,
       locale = locale,
-      digits = digits,
+      delim = delim,
+      sort = sort,
       crosstalk_key = key,
-      crosstalk_group = group,
-      number_format = ifelse(!is.null(unit),
-        "unit",
-        ifelse(!is.null(currency), "currency", number_format)
-      ),
-      signDisplay = signDisplay,
-      currency = currency,
-      unit = unit,
-      quantile = quantile,
-      notation = notation
+      crosstalk_group = group
     )
   )
 
@@ -206,5 +145,5 @@ renderSummaryTextSpan <- function(expr, env = parent.frame(), quoted = FALSE) {
 
 # Use a <span> container rather than the default <div>
 summaryTextSpan_html <- function(id, style, class, ...) {
-  htmltools::tags$span(id = id, class = class)
+  htmltools::tags$span(id = id, class = class, .noWS = c("outside"))
 }

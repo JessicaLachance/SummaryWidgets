@@ -21,18 +21,18 @@ library(rlang)
 ```{r prepare-items}
 shared_mtcars = SharedData$new(mtcars[,c(1,2,4,6,7,9)])
 
-count_rows <- summaryTextSpan(
+count_rows <- summaryNumberSpan(
   data = shared_mtcars,
   statistic = "count")
 
-average_mpg <- summaryTextSpan(
+average_mpg <- summaryNumberSpan(
   data = shared_mtcars,
   statistic = "mean",
   column = "mpg",
   digits = 1,
   unit = "mile-per-gallon") #well formed unit https://tc39.es/ecma402/#sec-iswellformedunitidentifier
 
-pct_automatic <- summaryTextSpan(
+pct_automatic <- summaryNumberSpan(
   data = shared_mtcars,
   statistic = "pct_total",
   selection = ~am==0,
@@ -248,7 +248,7 @@ reactable(
   columns = list(
    mpg = colDef(
      name ="Miles per gallon",
-     footer =  summaryTextSpan(
+     footer =  summaryNumberSpan(
        data = shared_mtcars,
        statistic = "mean",
        column = "mpg",
@@ -257,7 +257,7 @@ reactable(
      ),
     cyl = colDef(
      name ="Number of cylinders",
-     footer = summaryTextSpan(
+     footer = summaryNumberSpan(
        data = shared_mtcars,
        statistic = "mean",
        column = "cyl",
@@ -265,7 +265,7 @@ reactable(
      ),
     hp = colDef(
      name = "Gross horsepower",
-     footer =  summaryTextSpan(
+     footer =  summaryNumberSpan(
        data = shared_mtcars,
        statistic = "mean",
        column = "hp",
@@ -273,7 +273,7 @@ reactable(
      ),
    wt = colDef(
      name = "Weight (x1000 lbs)",
-     footer =  summaryTextSpan(
+     footer =  summaryNumberSpan(
        data = shared_mtcars,
        statistic = "mean",
        column = "wt",
@@ -282,7 +282,7 @@ reactable(
        ),
    qsec = colDef(
      name = "Quarter mile time",
-     footer =  summaryTextSpan(
+     footer =  summaryNumberSpan(
        data = shared_mtcars,
        statistic = "mean",
        column = "qsec",
@@ -291,7 +291,7 @@ reactable(
        ),
    am = colDef(
      name ="Automatic? (0 = Automatic)",
-     footer = summaryTextSpan(
+     footer = summaryNumberSpan(
        data = shared_mtcars,
        statistic = "pct_total",
        selection = ~am==0,

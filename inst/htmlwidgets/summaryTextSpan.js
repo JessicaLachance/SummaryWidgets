@@ -18,6 +18,8 @@ HTMLWidgets.widget({
     return {
       renderValue: function (x) {
 
+        el.setAttribute('aria-live', 'polite');
+
         x.settings.locale = (x.settings.locale === "navigator.language") ? navigator.language : x.settings.locale;
 
         // Make a data object with keys so we can easily update the selection
@@ -35,8 +37,8 @@ HTMLWidgets.widget({
 
         // Update the display to show the values in d
         var update = function (d, n) {
-          let [value, value_format] = calculateSingleValues(d, n, x);
-          el.innerText = value_format;
+          let value = calculateSingleText(d, n, x);
+          el.innerText = value;
         };
 
         // Set up to receive crosstalk filter and selection events
@@ -62,13 +64,11 @@ HTMLWidgets.widget({
 
         update(data, x.numerator);
       },
-
       resize: function (width, height) {
 
         // TODO: code to re-render the widget with a new size
 
       }
-
     };
   }
 });

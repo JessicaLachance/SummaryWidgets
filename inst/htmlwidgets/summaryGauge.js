@@ -128,19 +128,47 @@ HTMLWidgets.widget({
         * Draws a gauge, with the number in the center, and the min and max value underneath
         * @param {String} nodeID - The id of the containing div of the chart. This div must have the class svg-wrapper
         * @param {Array} data - An array of objects representing the data to be visualized
-        * @param {Object} config - The pie chart config object
+        * @param {Object} config - The gauge config object
         */
         var drawGauge = function (nodeID, data, config) {
+
+          let [value, min, max] = calculateGaugeValues(data, config);
+
+          let value_footnote = getValueFootnote(value, min, max, config.settings.locale);
+
+          let value_f, min_f, max_f;
+
+          switch (config.settings.number_format) {
+            case 'percent':
+              value_f = format_percent(value, config.settings);
+              min_f = format_percent(min, config.settings);
+              max_f = format_percent(max, config.settings);
+              break;
+            case "currency":
+              value_f = format_currency(value, config.settings);
+              min_f = format_currency(min, config.settings);
+              max_f = format_currency(max, config.settings);
+              break;
+            case "unit":
+              value_f = format_unit(value, config.settings);
+              min_f = format_unit(min, config.settings);
+              max_f = format_unit(max, config.settings);
+              break;
+            case "decimal":
+              value_f = format_number(value, config.settings);
+              min_f = format_number(min, config.settings);
+              max_f = format_number(max, config.settings);
+              break;
+          }
 
           let svg = d3.select(`#${nodeID}`)
             .append("svg")
             .attr("width", config.containerWidth)
             .attr("height", config.containerHeight)
             .attr("role", "img")
+            .attr("aria-labelledby",`${nodeID}-title ${nodeID}-desc`)
             .attr("preserveAspectRatio", "xMidYMin meet")
-            .attr("viewBox", `0 0 ${config.viewbox.width}, ${config.viewbox.height}`)
-
-            .attr("aria-labelledby", `${nodeID}-title ${nodeID}-desc`);
+            .attr("viewBox", `0 0 ${config.viewbox.width}, ${config.viewbox.height}`);
 
           svg.append("title")
             .attr("id", `${nodeID}-title`)
@@ -148,9 +176,16 @@ HTMLWidgets.widget({
 
           svg.append("desc")
             .attr("id", `${nodeID}-desc`)
-            .text(config.desc);
-
-          let [value, min, max] = calculateGaugeValues(data, config);
+            .attr("aria-live","polite")
+            .text(config.desc.concat(
+              config.minText,
+              min_f, ". ",
+              config.maxText,
+              max_f,". ",
+              config.valueText,
+              value_f, ". ",
+              value_footnote
+            ));
 
           let valuePct = targetPercent(min, max, value);
           valuePct = valuePct < 0 ? 0 : valuePct > 1 ? 1 : valuePct;
@@ -179,60 +214,36 @@ HTMLWidgets.widget({
             .style("stroke", function (d) { return d.fill })
             .style("fill", function (d) { return d.fill });
 
-          let value_footnote = getValueFootnote(value, min, max, config.settings.locale);
-
-          switch (config.settings.number_format) {
-            case 'percent':
-              value = format_percent(value, config.settings);
-              min = format_percent(min, config.settings);
-              max = format_percent(max, config.settings);
-              break;
-            case "currency":
-              value = format_currency(value, config.settings);
-              min = format_currency(min, config.settings);
-              max = format_currency(max, config.settings);
-              break;
-            case "unit":
-              value = format_unit(value, config.settings);
-              min = format_unit(min, config.settings);
-              max = format_unit(max, config.settings);
-              break;
-            case "decimal":
-              value = format_number(value, config.settings);
-              min = format_number(min, config.settings);
-              max = format_number(max, config.settings);
-              break;
-          }
-
           svgGauge.selectAll(".value-text")
-            .data([value]).enter()
+            .data([value_f]).enter()
             .append("text")
             .attr('class', "value-text")
             .attr("font-size", "18px")
             .attr("text-anchor", "middle")
+            .style("fill", config.mainText)
             .text(d => d)
             .call(shrink, config.innerRadius * 2);
 
           svgGauge.selectAll(".min-text")
-            .data([min]).enter()
+            .data([min_f]).enter()
             .append("text")
             .attr('class', "min-text")
             .attr("font-size", "12px")
             .attr("text-anchor", "end")
             .attr("transform",
               `translate(${-(gaugeConfig.innerRadius)},${config.margin.top})`)
-            .style("fill", "#777")
+            .style("fill", config.noteText)
             .text(d => d);
 
           svgGauge.selectAll(".max-text")
-            .data([max]).enter()
+            .data([max_f]).enter()
             .append("text")
             .attr('class', "max-text")
             .attr("font-size", "12px")
             .attr("text-anchor", "start")
             .attr("transform",
               `translate(${(gaugeConfig.innerRadius)},${config.margin.top})`)
-            .style("fill", "#777")
+            .style("fill", config.noteText)
             .text(d => d);
 
           svgGauge.selectAll(".ftn-text")
@@ -243,7 +254,7 @@ HTMLWidgets.widget({
             .attr("text-anchor", "middle")
             .attr("transform",
               `translate(${0},${config.margin.top + 8})`)
-            .style("fill", "#777")
+            .style("fill", config.noteText)
             .text(d => d)
             .call(shrink, config.viewbox.width);
         }
@@ -256,14 +267,51 @@ HTMLWidgets.widget({
          */
         var updateGauge = function (nodeID, data, config) {
 
+          let [value, min, max] = calculateGaugeValues(data, config);
+
+          let value_footnote = getValueFootnote(value, min, max, config.settings.locale);
+
+          let value_f, min_f, max_f;
+
+          if (value !== "NA") {
+            switch (config.settings.number_format) {
+              case 'percent':
+                value_f = format_percent(value, config.settings);
+                min_f = format_percent(min, config.settings);
+                max_f = format_percent(max, config.settings);
+                break;
+              case "currency":
+                value_f = format_currency(value, config.settings);
+                min_f = format_currency(min, config.settings);
+                max_f = format_currency(max, config.settings);
+                break;
+              case "unit":
+                value_f = format_unit(value, config.settings);
+                min_f = format_unit(min, config.settings);
+                max_f = format_unit(max, config.settings);
+                break;
+              case "decimal":
+                value_f = format_number(value, config.settings);
+                min_f = format_number(min, config.settings);
+                max_f = format_number(max, config.settings);
+                break;
+            }
+          }
+
           let svg = d3.select(`#${nodeID}`)
             .select("svg");
 
-          svg.select("title").text(config.title);
-          svg.select("desc").text(config.desc);
+          svg.select("desc")
+            .text(config.desc.concat(
+              config.minText,
+              min_f, ". ",
+              config.maxText,
+              max_f, ". ",
+              config.valueText,
+              value_f, ". ",
+              value_footnote
+            ));
 
-
-          let [value, min, max] = calculateGaugeValues(data, config);
           let gaugeData;
 
           if (value !== "NA") {
@@ -304,40 +352,15 @@ HTMLWidgets.widget({
             .style("stroke", function (d) { return d.fill })
             .style("fill", function (d) { return d.fill });
 
-          let value_footnote = getValueFootnote(value, min, max, config.settings.locale);
-
-          if (value !== "NA") {
-            switch (config.settings.number_format) {
-              case 'percent':
-                value = format_percent(value, config.settings);
-                min = format_percent(min, config.settings);
-                max = format_percent(max, config.settings);
-                break;
-              case "currency":
-                value = format_currency(value, config.settings);
-                min = format_currency(min, config.settings);
-                max = format_currency(max, config.settings);
-                break;
-              case "unit":
-                value = format_unit(value, config.settings);
-                min = format_unit(min, config.settings);
-                max = format_unit(max, config.settings);
-                break;
-              case "decimal":
-                value = format_number(value, config.settings);
-                min = format_number(min, config.settings);
-                max = format_number(max, config.settings);
-                break;
-            }
-          }
 
           svg.selectAll(".value-text")
-            .data([value])
+            .data([value_f])
             .join(function (enter) {
               return enter.append("text")
                 .attr("class", "value-text")
                 .attr("font-size", "18px")
                 .attr("text-anchor", "middle")
+                .style("fill", config.mainText)
                 .text(d => d)
                 .call(shrink, config.innerRadius * 2);
             },
@@ -349,14 +372,14 @@ HTMLWidgets.widget({
               })
 
           svg.select(".min-text")
-            .data([min ?? 0])
+            .data([min_f])
             .join(function (enter) {
               return enter.append("text")
                 .attr("class", "min-text")
                 .attr("font-size", "12px")
                 .attr("text-anchor", "end")
                 .attr("transform", `translate(${-(gaugeConfig.innerRadius)},${config.margin.top})`)
-                .style("fill", "#777")
+                .style("fill", config.noteText)
                 .text(d => d)
             },
               function (update) {
@@ -364,14 +387,14 @@ HTMLWidgets.widget({
               })
 
           svg.select(".max-text")
-            .data([max ?? 1])
+            .data([max_f])
             .join(function (enter) {
               return enter.append("text")
                 .attr("class", "max-text")
                 .attr("font-size", "12px")
                 .attr("text-anchor", "start")
                 .attr("transform", `translate(${-(gaugeConfig.innerRadius)},${config.margin.top })`)
-                .style("fill", "#777")
+                .style("fill", config.noteText)
                 .text(d => d)
             },
               function (update) {
@@ -386,7 +409,7 @@ HTMLWidgets.widget({
                 .attr("font-size", "9px")
                 .attr("text-anchor", "middle")
                 .attr("transform", `translate(${0},${config.margin.top + 8})`)
-                .style("fill", "#777")
+                .style("fill", config.noteText)
                 .text(d => d)
                 .call(shrink, config.viewbox.width);
             },
@@ -422,16 +445,45 @@ HTMLWidgets.widget({
         gaugeConfig.outerRadius = Math.min(gaugeConfig.chartWidth, gaugeConfig.chartHeight) / 2;
         gaugeConfig.innerRadius = gaugeConfig.outerRadius * (0.6);   //innerRadius  = 0 gives a pie chart, 0 <innerRadius < outerRadius gives a donut chart
         gaugeConfig.transDur = 1000;
-        gaugeConfig.title = "A gauge visualization";
-        gaugeConfig.desc = "A gauge visualization";
-        gaugeConfig.colourScale = d3.scaleThreshold()
-          .domain(x.color_thresholds.domain)
-          .range(x.color_thresholds.range);
         gaugeConfig.settings = x.settings;
         gaugeConfig.settings.locale = (x.settings.locale === "navigator.language") ? navigator.language : x.settings.locale;
+        gaugeConfig.settings.lang = gaugeConfig.settings.locale.split("-")[0].toLowerCase();
+        gaugeConfig.title = x.title ?? "";
+
+        if(["de","en","es","fr","it","nl","ru"].includes(gaugeConfig.lang)){
+          gaugeConfig.desc = x.desc ?? gaugeAltText[gaugeConfig.settings.lang]["desc"];
+          gaugeConfig.minText = gaugeAltText[gaugeConfig.settings.lang]["min"];
+          gaugeConfig.maxText = gaugeAltText[gaugeConfig.settings.lang]["max"];
+          gaugeConfig.valueText = gaugeAltText[gaugeConfig.settings.lang]["value"];
+        } else {
+          gaugeConfig.desc = x.desc ?? "";
+          gaugeConfig.minText = "";
+          gaugeConfig.maxText = "";
+          gaugeConfig.valueText = "";
+        }
+        gaugeConfig.colourScale;
+        gaugeConfig.mainText;
+        gaugeConfig.noteText;
         gaugeConfig.numerator = x.numerator;
         gaugeConfig.min = x.min;
         gaugeConfig.max = x.max;
+
+        if(window.matchMedia('(forced-colors: active)').matches) {
+            gaugeConfig.colourScale = d3.scaleThreshold()
+              .domain(x.color_thresholds.domain)
+              .range(["AccentColor"]);
+
+            gaugeConfig.noteText = "CanvasText";
+            gaugeConfig.mainText = "CanvasText";
+
+         } else{
+            gaugeConfig.colourScale = d3.scaleThreshold()
+              .domain(x.color_thresholds.domain)
+              .range(x.color_thresholds.range);
+
+            gaugeConfig.noteText = "#777";
+            gaugeConfig.mainText = "black";
+         }
 
         // Make a data object with keys so we can easily update the selection
         var data = {};
@@ -480,6 +532,7 @@ HTMLWidgets.widget({
 
         let ct_sel = new crosstalk.SelectionHandle();
         ct_sel.setGroup(x.settings.crosstalk_group);
+
         ct_sel.on("change", function (e) {
           if (e.value) {
             if (x.settings.statistic === "pct_total") {
@@ -493,6 +546,27 @@ HTMLWidgets.widget({
             updateGauge(el.id, x.data, gaugeConfig);
           }
         });
+
+        window.matchMedia('(forced-colors: active)').addEventListener('change', event => {
+         if(event.matches) {
+            gaugeConfig.colourScale = d3.scaleThreshold()
+              .domain(x.color_thresholds.domain)
+              .range(["AccentColor"]);
+
+            gaugeConfig.noteText = "CanvasText";
+            gaugeConfig.mainText = "CanvasText";
+
+         } else{
+
+            gaugeConfig.colourScale = d3.scaleThreshold()
+              .domain(x.color_thresholds.domain)
+              .range(x.color_thresholds.range);
+
+            gaugeConfig.noteText = "#777";
+            gaugeConfig.mainText = "black";
+         }
+        updateGauge(el.id, x.data, gaugeConfig);
+       });
       },
 
       resize: function (width, height) {

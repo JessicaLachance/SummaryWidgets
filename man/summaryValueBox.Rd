@@ -16,7 +16,7 @@ summaryValueBox(
   signDisplay = c("auto", "always", "exceptZero", "negative", "never"),
   currency = NULL,
   unit = NULL,
-  quantile = NULL,
+  quantile = 0.5,
   notation = c("standard", "scientific", "engineering", "compact"),
   caption = NULL,
   icon = NULL,
@@ -70,7 +70,7 @@ The default number is 0.5 (i.e. median)}
 Possible vales are \code{c("standard", "scientific","engineering","compact")}.
 Standard is the default.}
 
-\item{caption}{Optiona parameter. The caption to display beneath the value.}
+\item{caption}{Optional parameter. The caption to display beneath the value.}
 
 \item{icon}{Optional parameter. A string representing the name of a bootstrap icon.
 See https://icons.getbootstrap.com/ for complete list of names}

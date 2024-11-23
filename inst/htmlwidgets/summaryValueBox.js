@@ -35,21 +35,55 @@ HTMLWidgets.widget({
 
         var color_thresholds = x.color_thresholds;
 
-        color_thresholds = convert_inf(color_thresholds);
+        var config = new Object();
 
         x.settings.locale = (x.settings.locale === "navigator.language") ? navigator.language : x.settings.locale;
+        config.lang = x.settings.locale.split("-")[0].toLowerCase();
+        if(["de","en","es","fr","it","nl","ru"].includes(config.lang)){
+          config.desc = vbAltText[config.lang]["desc"];
+          config.valueText = vbAltText[config.lang]["value"];
+          config.caption = x.caption ? vbAltText[config.lang]["caption"].concat(x.caption) : "";
+        } else {
+          config.desc = "";
+          config.valueText = "";
+          config.caption = x.caption ?? "";
+        }
+        config.title = x.title ?? x.caption ?? "";
 
-        let bgColourScale = d3.scaleThreshold()
-          .domain(color_thresholds.domain)
-          .range(color_thresholds.range);
+        color_thresholds = convert_inf(color_thresholds);
 
-        let textColourScale = d3.scaleThreshold()
-          .domain(color_thresholds.domain)
-          .range(color_thresholds.text_range);
+        let bgColourScale;
+        let textColourScale;
+        let iconColourScale;
 
-        let iconColourScale = d3.scaleThreshold()
-          .domain(color_thresholds.domain)
-          .range(color_thresholds.icon_range);
+         if(window.matchMedia('(forced-colors: active)').matches) {
+
+          bgColourScale = d3.scaleThreshold()
+            .domain(color_thresholds.domain)
+            .range(["AccentColor"]);
+
+          textColourScale = d3.scaleThreshold()
+            .domain(color_thresholds.domain)
+            .range(["CanvasText"]);
+
+          iconColourScale = d3.scaleThreshold()
+            .domain(color_thresholds.domain)
+            .range(["CanvasText"]);
+
+         } else{
+
+          bgColourScale = d3.scaleThreshold()
+            .domain(color_thresholds.domain)
+            .range(color_thresholds.range);
+
+          textColourScale = d3.scaleThreshold()
+            .domain(color_thresholds.domain)
+            .range(color_thresholds.text_range);
+
+          iconColourScale = d3.scaleThreshold()
+            .domain(color_thresholds.domain)
+            .range(color_thresholds.icon_range);
+         }
 
         let nodeID = el.id
 
@@ -62,18 +96,19 @@ HTMLWidgets.widget({
 
         svg.select("svg");
 
-        // svg.append("title")
-        //   .attr("id", `${nodeID}-title`)
-        //   .text(config.title);
+        svg.append("title")
+          .attr("id", `${nodeID}-title`)
+          .text(config.title);
 
-        // svg.append("desc")
-        //   .attr("id", `${nodeID}-desc`)
-        //   .text(config.desc);
+         svg.append("desc")
+          .attr("id", `${nodeID}-desc`)
+          .attr("aria-live","polite")
 
         let svg_rect = svg.append("rect")
           .style("width", "100%")
           .style("height", "100%")
-          .style("fill", "white");
+          .style("fill", "white")
+          .style('filter', 'none');
 
         if (x.icon) {
 
@@ -97,8 +132,8 @@ HTMLWidgets.widget({
           .attr("dominant-baseline", "central")
           .attr("dx", "5%")
           .attr("dy", "50%")
-          .style("font-weight", "bold")
-          .style("fill", "white")
+          .style('filter', 'none')
+          .style("font-weight", "bold");
 
         if (x.caption) {
           svg.selectAll(".caption-text")
@@ -112,7 +147,7 @@ HTMLWidgets.widget({
             .attr("dy", "72%")
             .style("fill", "white")
             .text(d => d)
-            .call(wrap, width * 0.94);
+            .call(wrap, width * 0.8);
         }
 
         // Make a data object with keys so we can easily update the selection
@@ -133,14 +168,24 @@ HTMLWidgets.widget({
 
           let [value, value_format] = calculateSingleValues(d, n, x)
 
-          svg.select("rect").transition()
+          svg.select(`#${nodeID}-desc`)
+            .text(config.desc.concat(
+              config.valueText,
+              value_format, ". ",
+              config.caption
+            ));
+
+          svg.select("rect")
+            .transition()
             .duration(1000)
+            .style('filter', 'none')
             .style("fill", bgColourScale(value));
 
           svg.select(".value-text")
             .text(value_format ?? "NA")
             .transition()
             .duration(1000)
+            .style('filter', 'none')
             .style("fill", textColourScale(value));
 
           if (x.caption) {
@@ -160,7 +205,7 @@ HTMLWidgets.widget({
               function (update) {
                 return update.text(d => d)
               })
-            .call(wrap, width * 0.94)
+            .call(wrap, width * 0.80)
             .transition()
             .duration(1000)
             .style("fill", textColourScale(value))
@@ -195,6 +240,39 @@ HTMLWidgets.widget({
           }
         });
 
+        // Make adjustments if high contrast mode is on
+       window.matchMedia('(forced-colors: active)').addEventListener('change', event => {
+         if(event.matches) {
+
+          bgColourScale = d3.scaleThreshold()
+            .domain(color_thresholds.domain)
+            .range(["AccentColor"]);
+
+          textColourScale = d3.scaleThreshold()
+            .domain(color_thresholds.domain)
+            .range(["CanvasText"]);
+
+          iconColourScale = d3.scaleThreshold()
+            .domain(color_thresholds.domain)
+            .range(["CanvasText"]);
+
+         } else{
+
+          bgColourScale = d3.scaleThreshold()
+            .domain(color_thresholds.domain)
+            .range(color_thresholds.range);
+
+          textColourScale = d3.scaleThreshold()
+            .domain(color_thresholds.domain)
+            .range(color_thresholds.text_range);
+
+          iconColourScale = d3.scaleThreshold()
+            .domain(color_thresholds.domain)
+            .range(color_thresholds.icon_range);
+         }
+          update(data,x.numerator);
+       });
+
         update(data, x.numerator);
       },
 
@@ -202,11 +280,14 @@ HTMLWidgets.widget({
 
         let resize_svg = d3.select(`#${el.id}`)
           .attr("width", width)
+          .attr("height", height)
           .select("svg")
           .attr("width", width)
+          .attr("height", height)
 
         let resize_rect = resize_svg.select("rect")
           .attr("width", width)
+          .attr("height", height)
 
         let icon = resize_svg.select("path")
 

@@ -1,0 +1,22 @@
+---
+output: 
+  html_document:
+    template: "GCWebTemplate.html"
+params:
+    lang: en
+title: "Visualizing the Official Voting Results of the 44th General Election"
+dept_name: "Jessica Lachance"
+date: "`r Sys.Date()`"
+---
+
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/2.2.4/jquery.js" defer></script>
+<script>
+$(document).ready(function() {
+    $.getScript("wet-boew/js/wet-boew.min.js", function() {
+        console.log("External script has been loaded and executed.");
+        });
+    $.getScript("GCWeb/js/theme.min.js", function() {
+      console.log("External script has been loaded and executed.");
+      });
+    });
+</script>

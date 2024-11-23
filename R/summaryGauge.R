@@ -77,6 +77,8 @@ summaryGauge <- function(data,
                            domain = c(0.5, 0.8),
                            range = c("red", "gold", "mediumseagreen")
                          ),
+                         accessible_title = NULL,
+                         accessible_desc = NULL,
                          width = NULL,
                          height = NULL,
                          elementId = NULL) {
@@ -188,6 +190,8 @@ summaryGauge <- function(data,
     min = get0("min"),
     max = get0("max"),
     color_thresholds = color_thresholds,
+    accessible_title = get0('accessible_title'),
+    accessible_desc = get0('accessible_desc'),
     settings = list(
       statistic = statistic,
       locale = locale,

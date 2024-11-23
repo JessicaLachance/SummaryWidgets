@@ -86,8 +86,10 @@ summaryValueBox <- function(data,
                               domain = c(0.5, 0.8),
                               range = c("red", "gold", "mediumseagreen")
                             ),
-                            width = NULL,
-                            height = NULL,
+                            accessible_title = caption,
+                            accessible_desc = NULL,
+                            width = "100%",
+                            height = "150px",
                             elementId = NULL) {
 
   if (!is.null(get0("caption")) && !is_scalar_atomic(caption)) {
@@ -207,6 +209,8 @@ summaryValueBox <- function(data,
     numerator = get0("numerator"),
     color_thresholds = color_thresholds,
     caption = get0("caption"),
+    accessible_title = get0('accessible_title'),
+    accessible_desc = get0('accessible_desc'),
     icon = ifelse(!is.null(icon), bsicons::bs_icon(icon), FALSE),
     settings = list(
       statistic = statistic,
@@ -255,7 +259,7 @@ summaryValueBox <- function(data,
 #' @name summaryValueBox-shiny
 #'
 #' @export
-summaryValueBoxOutput <- function(outputId, width = "100%", height = "160px") {
+summaryValueBoxOutput <- function(outputId, width = "100%", height = "150px") {
   htmlwidgets::shinyWidgetOutput(
     outputId,
     "summaryValueBox",
