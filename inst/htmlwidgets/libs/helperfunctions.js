@@ -1,3 +1,11 @@
+function toggleAriaHidden(element_selector) {
+    let element = document.querySelector(element_selector);
+    element.setAttribute("aria-hidden", "true");
+    requestAnimationFrame(() => {
+        element.removeAttribute("aria-hidden");
+    });
+}
+
 var invertColor = function(hex, bw) {
     if (hex.indexOf('#') === 0) {
         hex = hex.slice(1);
@@ -309,45 +317,31 @@ gaugeAltText.ru = {
 let vbAltText = new Object();
 
 vbAltText.de = {
-  desc:"Dieses Diagramm visualisiert einen Schlüsselwert als buntes Kästchen. ",
   value: "Der Schlüsselwert ist ",
-  caption:"Die Überschrift unter dem Schlüsselwert lautet: ",
 }
 
 vbAltText.en = {
-  desc:"This graph visualizes a key value as a colourful box. ",
   value: "The key value is ",
-  caption: "The caption below the key value reads: "
 }
 
 vbAltText.es = {
-  desc:"Este gráfico visualiza un valor clave como un cuadro colorido. ",
   value: "El valor clave es ",
-  caption:"El título debajo del valor clave dice: ",
 }
 
 vbAltText.fr = {
-  desc:"Ce graphique visualise une valeur clé sous forme d'un boîte colorée. ",
   value: "La valeur clé est ",
-  caption:"La légende sous la valeur clé indique : ",
 }
 
 vbAltText.it = {
-  desc:"Questo grafico visualizza un valore chiave come una casella colorata. ",
   value: "Il valore chiave è ",
-  caption:"La didascalia sotto il valore chiave recita: ",
 }
 
 vbAltText.nl = {
-  desc:"Deze grafiek visualiseert een sleutelwaarde als een kleurrijk kader. ",
   value: "De sleutelwaarde is ",
-  caption:"Het onderschrift onder de sleutelwaarde luidt:"
 }
 
 vbAltText.ru = {
-  desc:"Этот график визуализирует ключевое значение в виде цветного прямоугольника. ",
   value: "Ключевое значение – ",
-  caption:"Подпись под ключевым значением гласит:",
 }
 
 

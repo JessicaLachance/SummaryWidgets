@@ -166,7 +166,8 @@ HTMLWidgets.widget({
             .attr("width", config.containerWidth)
             .attr("height", config.containerHeight)
             .attr("role", "img")
-            //.attr("aria-labelledby",`${nodeID}-title ${nodeID}-desc`)
+            .attr("aria-labelledby",`${nodeID}-title ${nodeID}-desc`)
+            .attr("aria-live","polite")
             .attr("preserveAspectRatio", "xMidYMin meet")
             .attr("viewBox", `0 0 ${config.viewbox.width}, ${config.viewbox.height}`);
 
@@ -176,7 +177,6 @@ HTMLWidgets.widget({
 
           svg.append("desc")
             .attr("id", `${nodeID}-desc`)
-            .attr("aria-live","off")
             .text(x.desc ?? config.desc.concat(
               config.minText,
               min_f, ". ",
@@ -450,7 +450,7 @@ HTMLWidgets.widget({
         gaugeConfig.settings.lang = gaugeConfig.settings.locale.split("-")[0].toLowerCase();
 
         if(x.title){
-          if(x.title.str.charAt(x.title.str.length-1) != ".")){
+          if(x.title.charAt(x.title.length-1) != "."){
             gaugeConfig.title = x.title.concat(".");
           } else {
             gaugeConfig.title = x.title;
@@ -537,6 +537,7 @@ HTMLWidgets.widget({
             gaugeConfig.numerator = x.numerator;
             updateGauge(el.id, x.data, gaugeConfig);
           }
+          toggleAriaHidden(`#${nodeID}`);
         });
 
         let ct_sel = new crosstalk.SelectionHandle();
@@ -554,6 +555,7 @@ HTMLWidgets.widget({
             gaugeConfig.numerator = x.numerator;
             updateGauge(el.id, x.data, gaugeConfig);
           }
+          toggleAriaHidden(`#${nodeID}`);
         });
 
         window.matchMedia('(forced-colors: active)').addEventListener('change', event => {

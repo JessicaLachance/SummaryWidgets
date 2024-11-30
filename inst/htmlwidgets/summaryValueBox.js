@@ -46,13 +46,13 @@ HTMLWidgets.widget({
         }
 
         if(x.title){
-          if(x.title.str.charAt(x.title.str.length-1) != ".")){
+          if(x.title.charAt(x.title.length-1) != "."){
             config.title = x.title.concat(".");
           } else {
             config.title = x.title;
           }
-        } else if(x.caption){
-          if(x.caption.str.charAt(x.caption.str.length-1) != ".")){
+        } else if (x.caption) {
+          if((x.caption).charAt((x.caption).length-1) != "."){
             config.title = x.caption.concat(".");
           } else {
             config.title = x.caption;
@@ -104,7 +104,8 @@ HTMLWidgets.widget({
           .attr("height", height)
           .append("svg")
           .attr("role", "img")
-          //.attr("aria-labelledby", `${nodeID}-title ${nodeID}-desc`);
+          .attr("aria-describedby", `${nodeID}-title ${nodeID}-desc`)
+          .attr("aria-live","off");
 
         svg.select("svg");
 
@@ -113,8 +114,7 @@ HTMLWidgets.widget({
           .text(config.title);
 
          svg.append("desc")
-          .attr("id", `${nodeID}-desc`)
-          .attr("aria-live","off")
+          .attr("id", `${nodeID}-desc`);
 
         let svg_rect = svg.append("rect")
           .style("width", "100%")
@@ -180,6 +180,7 @@ HTMLWidgets.widget({
 
           let [value, value_format] = calculateSingleValues(d, n, x)
 
+
           svg.select(`#${nodeID}-desc`)
             .text(x.desc ?? config.desc.concat(
               (value_format ?? "NA"),
@@ -239,6 +240,7 @@ HTMLWidgets.widget({
           } else {
             update(data, x.numerator);
           }
+          toggleAriaHidden(`#${nodeID}`);
         });
 
         var ct_sel = new crosstalk.SelectionHandle();
@@ -249,6 +251,7 @@ HTMLWidgets.widget({
           } else {
             update(data, x.numerator, x.callback);
           }
+          toggleAriaHidden(`#${nodeID}`);
         });
 
         // Make adjustments if high contrast mode is on
