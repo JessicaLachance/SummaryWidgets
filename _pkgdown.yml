@@ -4,6 +4,6 @@ template:
 navbar:
   links:
     - text: "mtcars dashboard"
-      href: ../example_dashboard/example.html
+      href: Examples/mtcars.html
     - text: "Voter Turnout dashboard"
-      href: ../example_dashboard/GE44_vis_en.html
+      href: Examples/GE44_vis_en.html
