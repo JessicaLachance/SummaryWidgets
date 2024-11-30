@@ -40,15 +40,27 @@ HTMLWidgets.widget({
         x.settings.locale = (x.settings.locale === "navigator.language") ? navigator.language : x.settings.locale;
         config.lang = x.settings.locale.split("-")[0].toLowerCase();
         if(["de","en","es","fr","it","nl","ru"].includes(config.lang)){
-          config.desc = vbAltText[config.lang]["desc"];
-          config.valueText = vbAltText[config.lang]["value"];
-          config.caption = x.caption ? vbAltText[config.lang]["caption"].concat(x.caption) : "";
+          config.desc = vbAltText[config.lang]["value"];
         } else {
           config.desc = "";
-          config.valueText = "";
-          config.caption = x.caption ?? "";
         }
-        config.title = x.title ?? x.caption ?? "";
+
+        if(x.title){
+          if(x.title.str.charAt(x.title.str.length-1) != ".")){
+            config.title = x.title.concat(".");
+          } else {
+            config.title = x.title;
+          }
+        } else if(x.caption){
+          if(x.caption.str.charAt(x.caption.str.length-1) != ".")){
+            config.title = x.caption.concat(".");
+          } else {
+            config.title = x.caption;
+          }
+        }
+        else {
+          config.title = "";
+        }
 
         color_thresholds = convert_inf(color_thresholds);
 
@@ -92,7 +104,7 @@ HTMLWidgets.widget({
           .attr("height", height)
           .append("svg")
           .attr("role", "img")
-          .attr("aria-labelledby", `${nodeID}-title ${nodeID}-desc`);
+          //.attr("aria-labelledby", `${nodeID}-title ${nodeID}-desc`);
 
         svg.select("svg");
 
@@ -102,7 +114,7 @@ HTMLWidgets.widget({
 
          svg.append("desc")
           .attr("id", `${nodeID}-desc`)
-          .attr("aria-live","polite")
+          .attr("aria-live","off")
 
         let svg_rect = svg.append("rect")
           .style("width", "100%")
@@ -169,10 +181,9 @@ HTMLWidgets.widget({
           let [value, value_format] = calculateSingleValues(d, n, x)
 
           svg.select(`#${nodeID}-desc`)
-            .text(config.desc.concat(
-              config.valueText,
-              value_format, ". ",
-              config.caption
+            .text(x.desc ?? config.desc.concat(
+              (value_format ?? "NA"),
+              "."
             ));
 
           svg.select("rect")

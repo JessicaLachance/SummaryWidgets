@@ -315,7 +315,7 @@ vbAltText.de = {
 }
 
 vbAltText.en = {
-  desc:"This graph visualizes a key value as colourful box. ",
+  desc:"This graph visualizes a key value as a colourful box. ",
   value: "The key value is ",
   caption: "The caption below the key value reads: "
 }
@@ -327,7 +327,7 @@ vbAltText.es = {
 }
 
 vbAltText.fr = {
-  desc:"Ce graphique visualise une valeur clé sous forme de boîte colorée. ",
+  desc:"Ce graphique visualise une valeur clé sous forme d'un boîte colorée. ",
   value: "La valeur clé est ",
   caption:"La légende sous la valeur clé indique : ",
 }

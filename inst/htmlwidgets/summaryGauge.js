@@ -166,18 +166,18 @@ HTMLWidgets.widget({
             .attr("width", config.containerWidth)
             .attr("height", config.containerHeight)
             .attr("role", "img")
-            .attr("aria-labelledby",`${nodeID}-title ${nodeID}-desc`)
+            //.attr("aria-labelledby",`${nodeID}-title ${nodeID}-desc`)
             .attr("preserveAspectRatio", "xMidYMin meet")
             .attr("viewBox", `0 0 ${config.viewbox.width}, ${config.viewbox.height}`);
 
           svg.append("title")
             .attr("id", `${nodeID}-title`)
-            .text(config.title);
+            .text(config.title.concat("."));
 
           svg.append("desc")
             .attr("id", `${nodeID}-desc`)
-            .attr("aria-live","polite")
-            .text(config.desc.concat(
+            .attr("aria-live","off")
+            .text(x.desc ?? config.desc.concat(
               config.minText,
               min_f, ". ",
               config.maxText,
@@ -302,7 +302,7 @@ HTMLWidgets.widget({
             .select("svg");
 
           svg.select("desc")
-            .text(config.desc.concat(
+            .text(x.desc ?? config.desc.concat(
               config.minText,
               min_f, ". ",
               config.maxText,
@@ -448,15 +448,24 @@ HTMLWidgets.widget({
         gaugeConfig.settings = x.settings;
         gaugeConfig.settings.locale = (x.settings.locale === "navigator.language") ? navigator.language : x.settings.locale;
         gaugeConfig.settings.lang = gaugeConfig.settings.locale.split("-")[0].toLowerCase();
-        gaugeConfig.title = x.title ?? "";
 
-        if(["de","en","es","fr","it","nl","ru"].includes(gaugeConfig.lang)){
-          gaugeConfig.desc = x.desc ?? gaugeAltText[gaugeConfig.settings.lang]["desc"];
+        if(x.title){
+          if(x.title.str.charAt(x.title.str.length-1) != ".")){
+            gaugeConfig.title = x.title.concat(".");
+          } else {
+            gaugeConfig.title = x.title;
+          }
+        } else {
+          gaugeConfig.title = "";
+        }
+
+        if(["de","en","es","fr","it","nl","ru"].includes(gaugeConfig.settings.lang)){
+          gaugeConfig.desc = gaugeAltText[gaugeConfig.settings.lang]["desc"];
           gaugeConfig.minText = gaugeAltText[gaugeConfig.settings.lang]["min"];
           gaugeConfig.maxText = gaugeAltText[gaugeConfig.settings.lang]["max"];
           gaugeConfig.valueText = gaugeAltText[gaugeConfig.settings.lang]["value"];
         } else {
-          gaugeConfig.desc = x.desc ?? "";
+          gaugeConfig.desc = "";
           gaugeConfig.minText = "";
           gaugeConfig.maxText = "";
           gaugeConfig.valueText = "";

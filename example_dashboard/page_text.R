@@ -25,7 +25,7 @@ if (lang == "en") {
     " mandates that the Chief Electoral Officer of Elections Canada produce a report summarizing proceedings after each federal election."
   )
   instructions_h2 <- "Instructions"
-  instructions_para <- "The dashboard below summarizes the results of the 44th General Eleciton by province and territory. You can use the drop down menu at the top of the dashboard to select a province. You can also select 'Canada' in the drop down menu to view data for the whole country. The contents of the dashboard will then change based on your selection."
+  instructions_para <- "The dashboard below summarizes the results of the 44th General Election by province and territory. You can use the drop down menu at the top of the dashboard to select a province. You can also select 'Canada' in the drop down menu to view data for the whole country. The contents of the dashboard will then change based on your selection."
   dashboard_h2 <- "44th General Election Results Dashboard"
   dashboard_nav <- "Dashboard options"
   dashboard_para <- list(
@@ -59,6 +59,7 @@ if (lang == "en") {
     selected_province,
     "relative to other provinces in 2021"
   )
+  gauge_title <- "Voter turnout as a gauge."
   vote_method_h4 <- list(
     "Breakdown of valid votes in ",
     selected_province,
@@ -161,6 +162,7 @@ situation changed."),
     selected_province,
     "par rapport aux autres provinces en 2021"
   )
+  gauge_title <- "Taux de participation visualisée dans une gauge."
   vote_method_h4 <- list(
     "Répartition des valid votes en/au ",
     selected_province,

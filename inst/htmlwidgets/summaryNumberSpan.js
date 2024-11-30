@@ -18,7 +18,7 @@ HTMLWidgets.widget({
     return {
       renderValue: function (x) {
 
-        el.setAttribute('aria-live', 'polite');
+        el.setAttribute('aria-live', 'off');
 
         x.settings.locale = (x.settings.locale === "navigator.language") ? navigator.language : x.settings.locale;
 

@@ -14,7 +14,9 @@ content <- tagList(
         varArgs = list("aria-label" = dashboard_nav),
         prov_filter
       ),
-      p(!!!dashboard_para, .noWS = "outside"),
+      p(!!!dashboard_para,
+        .noWS = "outside",
+        varArgs = list("aria-live" = "polite")),
       h3(polling_sites_h3),
       !!!polling_sites_para,
       h4(!!!polling_sites_h4,
@@ -22,6 +24,7 @@ content <- tagList(
       layout_columns(
         col_widths = breakpoints(xs=c(12,12,12), md=c(6,6,6), lg=c(4,4,4)),
         row_heights = breakpoints(xs="120px", lg="150px"),
+        varArgs = list("role" = "presentation"),
         summaryValueBox(
           data = shared_electors_polls,
           statistic = "sum",
@@ -77,6 +80,7 @@ content <- tagList(
             locale = lang,
             color_thresholds = list(domain = c(0),
                                     range = c("grey","#036064")),
+            accessible_title = gauge_title,
             height = "250px",
             width="100%"
           )
