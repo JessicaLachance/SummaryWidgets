@@ -1,4 +1,9 @@
 url: https://jessicalachance.github.io/SummaryWidgets/
 template:
   bootstrap: 5
-
+navbar:
+  links:
+    - text: "mtcars dashboard"
+      href: ../example_dashboard/example.html
+    - text: "Voter Turnout dashboard"
+      href: ../example_dashboard/GE44_vis_en.html
