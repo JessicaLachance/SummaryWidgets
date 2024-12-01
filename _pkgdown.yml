@@ -11,4 +11,4 @@ navbar:
     - text: "mtcars Dashboard Example"
       href: example.html
     - text: "Voter Turnout Dashboard Example"
-      href: GE44_vis_en.html
+      href: docs/GE44_vis_en.html
