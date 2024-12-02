@@ -1,0 +1,106 @@
+---
+output: 
+  html_document:
+    template: "GCWebTemplate-en.html"
+params:
+    lang: en
+title: "Visualizing the Official Voting Results of the 44th General Election"
+date: "`r Sys.Date()`"
+---
+
+<style type="text/css">
+.main-container {
+  max-width: 100% !important;
+  margin: auto;
+}
+
+.selectize-dropdown-content {
+  max-height: 150px;
+  overflow-y: auto;
+}
+</style>
+
+```{r setup, echo=FALSE, include=FALSE}
+# Grab R markdown param
+lang <- params$lang
+
+# Set knitr options
+knitr::opts_chunk$set(message = FALSE,
+                      warning = FALSE,
+                      echo = FALSE)
+source("data_prep.R")
+```
+
+
+```{r dashboard_spec, include=FALSE}
+# Load page text
+source("page_text.R")
+```
+
+```{r render_dashboard, fig.fullwidth = TRUE}
+source("web_page.R")
+content
+```
+
+```{r render_deps}
+all_deps <- resolveDependencies(
+  c(findDependencies(content),
+    list(
+      bootstrap5_dep,
+      wet_boew,
+      GCWeb
+      )
+    )
+)
+
+render_deps <- renderDependencies(all_deps)
+
+render_deps
+```
+
+```{r setup_js, results='asis'}
+cat(
+  sprintf(
+    "<script>
+      const lang = '%s';
+    </script>", 
+    params$lang
+  )
+)
+```
+
+```{js fix_filter}
+$(window).on("load",function() {
+  // Set the document language attribute
+  document.documentElement.setAttribute('lang', lang);
+
+  const provFilter = document.getElementById("prov_filter");
+  const selectField = provFilter?.getElementsByTagName("select")[0];
+
+  // Set up a MutationObserver to detect when selectize is initialized
+  const observer = new MutationObserver(function(mutations) {
+    if (selectField && selectField.selectize) {
+      // Stop observing once selectize is initialized
+      observer.disconnect();
+      console.log("Selectize initialized, executing additional logic");
+
+      const inputField = provFilter.getElementsByTagName("input")[0];
+      const labelField = provFilter.getElementsByTagName("label")[0];
+
+      // Fix accessibility for form control label
+      provFilter.setAttribute("tabindex",0);
+      inputField.id = 'prov_filter1';
+      selectField.setAttribute("aria-hidden", true);
+      labelField.setAttribute('for', 'prov_filter1');
+
+      // Set default value of the selectize control
+      selectField.selectize.setValue("Canada", false);
+    }
+  });
+
+  // Observe changes in the provFilter element
+  observer.observe(provFilter, { childList: true, subtree: true });
+});
+
+```
+
