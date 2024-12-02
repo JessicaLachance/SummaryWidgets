@@ -18,3 +18,5 @@ navbar:
       href: ../example_dashboard/example.html
     - text: "Voter Turnout Dashboard Example"
       href: ../example_dashboard/GE44_vis_en.html
+extra_assets:
+  - example_dashboard
