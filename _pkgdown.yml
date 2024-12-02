@@ -1,12 +1,6 @@
 url: https://jessicalachance.github.io/SummaryWidgets/
 template:
   bootstrap: 5
-articles:
-  - title: Example Dashboards
-    contents:
-      - example_dashboard/example.html
-      - example_dashboard/GE44_vis_en.html
-      - example_dashboard/GE44_vis_fr.html
 navbar:
   title: "My Package"
   left:
@@ -15,8 +9,6 @@ navbar:
     - text: "Reference"
       href: reference/index.html
     - text: "mtcars Dashboard Example"
-      href: example_dashboard/example.html
+      href: example.html
     - text: "Voter Turnout Dashboard Example"
-      href: example_dashboard/GE44_vis_en.html
-extra_assets:
-  - example_dashboard
+      href: GE44_vis_en.html
