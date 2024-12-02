@@ -1,0 +1,305 @@
+---
+title: "SummaryWidgets - mtCars Example"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: scroll
+    theme: 
+      version: 5
+      primary: "#4977ad"
+---
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(SummaryWidgets)
+library(crosstalk)
+library(reactable)
+library(bslib)
+library(htmltools)
+library(rlang)
+```
+
+```{r prepare-items}
+shared_mtcars = SharedData$new(mtcars[,c(1,2,4,6,7,9)])
+
+count_rows <- summaryNumberSpan(
+  data = shared_mtcars,
+  statistic = "count")
+
+average_mpg <- summaryNumberSpan(
+  data = shared_mtcars,
+  statistic = "mean",
+  column = "mpg",
+  digits = 1,
+  unit = "mile-per-gallon") #well formed unit https://tc39.es/ecma402/#sec-iswellformedunitidentifier
+
+pct_automatic <- summaryNumberSpan(
+  data = shared_mtcars,
+  statistic = "pct_total",
+  selection = ~am==0,
+  digits = 0, ## when digits == 0 0.1234 -> 12%
+  number_format = "percent") 
+
+pct_automatic_vb <- summaryValueBox(
+  data = shared_mtcars,
+  statistic = "pct_total",
+  selection = ~am==0,
+  digits = 0, ## when digits == 0 0.1234 -> 12%
+  number_format = "percent",
+  color_thresholds = list(domain = c(-Inf),
+                          range=c("black","gold")),
+  icon = "car-front-fill"
+)
+
+count_rows_vb <- summaryValueBox(
+  data = shared_mtcars,
+  statistic = "count",
+  caption = "Cars selected",
+  color_thresholds = list(domain = c(-Inf),
+                          range = c("black","gold"))
+)
+
+average_mpg_vb <- summaryValueBox(
+  data = shared_mtcars,
+  statistic = "quantile",
+  column = "mpg",
+  digits = 1,
+  unit = "mile-per-gallon",
+  quantile = 0.5,
+  caption = "Showing median value, can be adapted to other quantiles",
+  icon = "speedometer",
+  color_thresholds = list(domain = c(20),
+                          range = c("#6a0032","#036064"))
+  ) #well formed unit https://tc39.es/ecma402/#sec-iswellformedunitidentifier
+
+
+pct_automatic2 <- summaryGauge(
+  data = shared_mtcars,
+  statistic = "pct_total",
+  selection = ~am==0,
+  digits = 0, ## when digits == 0 0.1234 -> 12%
+  min = 0.33,
+  max = 0.66,
+  number_format = "percent",
+  height = "200px",
+  color_thresholds = list(domain = c(-Inf),
+                          range = c("black","gold")))
+
+meanQSec <- summaryGauge(
+  data = shared_mtcars,
+  statistic = "mean",
+  column = "qsec",
+  min = min(mtcars$qsec),
+  max = max(mtcars$qsec),
+  digits = 1,
+  unit = "second",
+  height = "200px",
+  color_thresholds = list(
+    domain = c(-Inf,0,15,17,19,21),
+    range = c("#444","#264653","#2a9d8f","#e9c46a","#f4a261","#e76f51","#d62828"))
+  )
+
+pct_gears_automatic <- summaryGauge(
+  data = shared_mtcars,
+  statistic = "sum_pct_total",
+  column = "hp",
+  selection = ~am==0,
+  digits = 0, ## when digits == 0 0.1234 -> 12%
+  number_format = "percent")
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Introduction
+
+This dashboard aims to show and test the features of the SummaryWidgets R package. It is modeled on [Ken Johnson's demo](https://kent37.github.io/summarywidget/) for his original SummaryWidget package. 
+
+Like Ken Johnson's dashboard, this dashboard uses the mtcars dataset as the example dataset. The mtcars dataset is one of the base R datasets and comes from the 1974 Motor Trend US magazine. The dataset includes 11 aspects of automobile design and performance for 32 automobiles.  More details about the mtcars dataset can be found at [R: Motor Trend Car Road Tests ](https://stat.ethz.ch/R-manual/R-devel/library/datasets/html/mtcars.html).
+
+This dashboard is interactive, you can view a customized subset of the data by using the controls in the section "Filter Options". You can select one more more cylinder options, and select a range of horsepower values to create custom results. By default, the entire dataset of 32 cars are selected.
+
+#### Current Selection
+
+The following paragraph highlights SummaryWidgets' ability to seamlessly integrate a summarized number within a paragraph of text, which can change as the filter options change.
+
+You have selected `r count_rows` cars with an average mpg of
+`r average_mpg`. Of the selected cars, `r pct_automatic` are automatic.
+
+### Filter options {data-width=175}
+
+```{r example, echo=FALSE}
+filter_checkbox("cyl", "Cylinders", shared_mtcars, ~cyl, inline = TRUE)
+filter_slider("hp", "Gross horsepower", shared_mtcars, ~hp, width = "100%")
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Number of Cars Selected
+
+#### Description
+
+This section highlights SummaryWidgets' capacity to present a dynamic valuebox the number of cars which fit the filter criteria. Additionally this valuebox is set to show no icon, but include caption.
+
+<!-- The colour of the valuebox is set to be the primary theme colour, using `bs_get_variables(bs_theme(),"primary")`. -->
+
+#### Valuebox
+
+```{r}
+
+count_rows_vb
+
+```
+
+### Percentage of Automatic Cars
+
+#### Description
+
+This section highlights SummaryWidgets' capacity to present a dynamic valuebox containing the percentage of all cars which are automatic. Additionally this valuebox is set to show a custom icon, but no caption.
+
+#### Valuebox
+
+```{r}
+
+pct_automatic_vb
+
+```
+
+
+### Median Miles per Gallon
+
+#### Description
+
+This section highlights SummaryWidgets' capacity to present a dynamic valuebox the median miles per gallon (mpg) cars which fit the filter criteria. This metric shows SummaryWidgets' ability to present a standard unit next to the number, a feature which kent37's SummaryWidget lacked. This valuebox includes an icon, a caption, and the background colour adjusts depending on the value (burgundy if the value is under 20 mpg, and teal if the value is over 20).
+
+#### Valuebox
+
+```{r}
+
+average_mpg_vb
+
+```
+
+Row {data-height=450 .tabset}
+-----------------------------------------------------------------------
+
+### Percentage of automatic transmission, and the median quarter mile time
+
+#### Description
+
+This section shows SummaryWidgets' capacity to present data in a guage visual. This tab shows two gauges:
+The first gauge is the percentage of cars with automatic transmission. The minimum value is set statically to be 0 (i.e. 0%), and the maximum value is set statically to be 1 (i.e. 100%).
+
+The second gauge is the average quarter mile time in seconds for the selected card. The minimum value is set dynamically to be the minimum and maximum of the selected cars.
+
+Note that putting two gauges in one card by wrapping them in `bslib::bscols()` does not have a good adaptability to other screen sizes.
+
+#### Guages
+
+```{r}
+
+bscols(
+  div(
+    h5("Percentage of selected cars which are automatic transmisison",
+       style="margin-left: 15px"),
+    pct_automatic2
+    ), 
+  div(
+    h5("Average quarter mile time (in seconds)",
+       style="margin-left: 15px"),
+    meanQSec
+  ),
+  widths = c(6,6),
+  device = "xs")
+
+```
+
+### Percentage of total horsepower belonging to automatic cars
+
+#### Description
+
+This section shows another example of a SummaryWidgets gauge. This gauge represents the percentage of horsepower which belongs to automatic cards (`statistic = sum_pct`). The colour is dynamic changing from red when the value is 50% or less, to yellow if the value is greater than 50% and less than or equal to 80% and green if the value is greater than 80%.
+
+#### Gauge
+
+```{r}
+
+pct_gears_automatic
+
+```
+
+Row
+-----------------------------------------------------------------------
+
+### Summary widget as the footer in a reactable
+
+The table below uses a table created with the library reactable, and uses SummaryWidgets to add a summarized value in the footer/total row. The table includes all rows of the mtcars dataset which match the filter criteria.
+
+```{r}
+
+reactable(
+  shared_mtcars,
+  defaultColDef = colDef(
+    align = "center",
+    headerStyle = list(background="white"),
+    footerStyle = list(fontWeight="bold"),
+    footer = "Average"
+  ),
+  columns = list(
+   mpg = colDef(
+     name ="Miles per gallon",
+     footer =  summaryNumberSpan(
+       data = shared_mtcars,
+       statistic = "mean",
+       column = "mpg",
+       digits = 1,
+       unit = "mile-per-gallon")
+     ),
+    cyl = colDef(
+     name ="Number of cylinders",
+     footer = summaryNumberSpan(
+       data = shared_mtcars,
+       statistic = "mean",
+       column = "cyl",
+       digits = 0)
+     ),
+    hp = colDef(
+     name = "Gross horsepower",
+     footer =  summaryNumberSpan(
+       data = shared_mtcars,
+       statistic = "mean",
+       column = "hp",
+       digits = 0)
+     ),
+   wt = colDef(
+     name = "Weight (x1000 lbs)",
+     footer =  summaryNumberSpan(
+       data = shared_mtcars,
+       statistic = "mean",
+       column = "wt",
+       digits = 2,
+       unit = "pound")
+       ),
+   qsec = colDef(
+     name = "Quarter mile time",
+     footer =  summaryNumberSpan(
+       data = shared_mtcars,
+       statistic = "mean",
+       column = "qsec",
+       digits = 2,
+       unit = "second")
+       ),
+   am = colDef(
+     name ="Automatic? (0 = Automatic)",
+     footer = summaryNumberSpan(
+       data = shared_mtcars,
+       statistic = "pct_total",
+       selection = ~am==0,
+       digits = 0,
+       number_format = "percent")
+   )
+  ),
+  bordered = TRUE,
+  striped = TRUE,
+  highlight = TRUE)
+```
