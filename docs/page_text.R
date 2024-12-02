@@ -1,10 +1,12 @@
+library(stringr)
+
 source_url <- paste0(
   "https://www.elections.ca/content.aspx?section=res&dir=rep/off/44gedata&document=summary&lang=",
-  lang)
+  str_sub(lang,1,1))
 
 stat_report_url <- paste0(
   "https://elections.ca/content.aspx?section=res&dir=rep/off/sta_ge44&document=index&lang=",
-  lang)
+  str_sub(lang,1,1))
 
 if (lang == "en") {
   title <- "Visualizing the Official Voting Results of the 44th General Election"
