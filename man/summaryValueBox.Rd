@@ -7,8 +7,10 @@
 summaryValueBox(
   data,
   statistic = c("count", "sum", "mean", "pct_total", "sum_pct_total", "min", "max",
-    "quantile"),
+    "quantile", "wt_mean", "sum_ratio"),
   column = NULL,
+  column2 = NULL,
+  weight = NULL,
   selection = NULL,
   locale = "navigator.language",
   digits = 0,
@@ -22,8 +24,10 @@ summaryValueBox(
   icon = NULL,
   color_thresholds = list(domain = c(0.5, 0.8), range = c("red", "gold",
     "mediumseagreen")),
-  width = NULL,
-  height = NULL,
+  accessible_title = NULL,
+  accessible_desc = NULL,
+  width = "100\%",
+  height = "150px",
   elementId = NULL
 )
 }
@@ -31,11 +35,17 @@ summaryValueBox(
 \item{data}{Data to summarize, normally an instance of \link[crosstalk:SharedData]{crosstalk::SharedData}.}
 
 \item{statistic}{The statistic to compute.
-Possible vales are \code{c("count", "sum", "mean", "pct_total", "sum_pct_total", "min", "max", "quantile")}.
+Possible vales are \code{c("count", "sum", "mean", "pct_total", "sum_pct_total", "min", "max", "quantile", "wt_mean","sum_ratio")}.
 Count is the default.}
 
 \item{column}{For most statistics, the column of \code{data} to summarize.
 Not used for \code{"count"} or \code{"pct_total"} statistic.}
+
+\item{column2}{Valid only when \code{statistic = "sum_ratio"}.
+\code{column2} is a column of \code{data} such that \code{sum_ratio = sum(column)/sum(column2)}}
+
+\item{weight}{Valid only when \code{statistic = "wt_mean"}.
+Specifies the weight column of \code{data}.}
 
 \item{selection}{Expression to select a fixed subset of \code{data}. May be
 a logical vector or a one-sided formula that evaluates to a logical vector.

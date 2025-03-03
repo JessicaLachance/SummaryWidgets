@@ -6,6 +6,31 @@ function toggleAriaHidden(element_selector) {
     });
 }
 
+// Filter obj, returning a new obj containing only
+// values with keys in keys.
+var filterKeys = function (obj, keys) {
+  var result = {};
+  keys.forEach(function (k) {
+    if (obj.hasOwnProperty(k))
+      result[k] = obj[k];
+  });
+  return result;
+};
+
+function createKeyedObject(dataArray, keyArray) {
+  let obj = {};
+  
+  if (keyArray === null) {
+    // Use indices as keys if no crosstalk keys are provided
+    dataArray.forEach((value, i) => obj[i] = value);
+  } else {
+    // Map crosstalk keys to data values
+    keyArray.forEach((key, i) => obj[key] = dataArray[i]);
+  }
+
+  return obj;
+}
+
 var invertColor = function(hex, bw) {
     if (hex.indexOf('#') === 0) {
         hex = hex.slice(1);
@@ -88,41 +113,58 @@ var quantile = function (arr, q) {
 };
 
 var calculateSingleValues = function (d, n, x) {
-  let values = [];
-  for (var key in d) {
-    if (d.hasOwnProperty(key)) { values.push(d[key]); }
-  }
+  d = Object.fromEntries(Object.entries(d).filter(([_, v]) => v !== undefined));
+  n = n ? Object.fromEntries(Object.entries(n).filter(([_, v]) => v !== undefined)) : null;
+  
   let value = 0;
   let value_format = x.settings.statistic === "count" ? format_number(0, x.settings) : "NA";
-  if (values.length) {
+
+  let dValues = Object.values(d);  // Convert object to array
+  let nValues = n ? Object.values(n) : [];  // Convert numerator object to array
+
+  if (dValues.length) {
     switch (x.settings.statistic) {
       case 'count':
-        value = values.length;
+        value = dValues.length;
         break;
       case 'sum':
-        value = values.reduce(function (acc, val) { return acc + val; }, 0);
+        value = d3.sum(dValues);
         break;
       case 'mean':
-        value = values.reduce(function (acc, val) { return acc + val; }, 0) / values.length;
+        value = d3.sum(dValues) / dValues.length;
         break;
       case 'pct_total':
-        var num = n.filter(v => Object.keys(d).includes(v));
-        value = num.length / values.length
+        value = nValues.length / dValues.length;
         break;
       case 'sum_pct_total':
-        var num = n.reduce(function (acc, val) { return acc + val; }, 0);
-        var denom = values.reduce(function (acc, val) { return acc + val; }, 0);
-        value = num / denom;
+        let num = d3.sum(nValues);
+        let denom = d3.sum(dValues);
+        value = denom === 0 ? "NA" : num / denom;
         break;
       case "min":
-        value = values.reduce(function (acc, val) { return Math.min(acc, val); }, Infinity);
+        value = d3.min(dValues);
         break;
       case "max":
-        value = values.reduce(function (acc, val) { return Math.max(acc, val); }, -Infinity);
+        value = d3.max(dValues);
         break;
       case "quantile":
-        value = quantile(values, x.settings.quantile)
+        value = quantile(dValues, x.settings.quantile);
+        break;
+      case "sum_ratio":
+        let tp = d3.sum(dValues);
+        let btm = d3.sum(nValues);
+        value = btm === 0 ? "NA" : tp / btm;
+        break;
+      case "wt_mean":
+        if (Object.keys(d).length !== Object.keys(n).length) {
+          throw new Error("Objects must have the same number of keys.");
+        }
+        let wt_sum = d3.sum(Object.keys(d).map(key => (d[key] ?? 0) * (n[key] ?? 0)));
+        let wt = d3.sum(nValues);
+        value = wt === 0 ? "NA" : wt_sum / wt;
+        break;
     }
+
     switch (x.settings.number_format) {
       case 'percent':
         value_format = format_percent(value, x.settings);
@@ -138,8 +180,10 @@ var calculateSingleValues = function (d, n, x) {
         break;
     }
   }
-  return ([value, value_format])
-}
+  
+  return [value, value_format];
+};
+
 
 var calculateSingleText = function (d, n, x) {
   let values = [];

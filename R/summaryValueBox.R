@@ -4,10 +4,14 @@
 #' caption beneath, and a large icon on the right side.
 #' @param data Data to summarize, normally an instance of [crosstalk::SharedData].
 #' @param statistic The statistic to compute.
-#' Possible vales are `c("count", "sum", "mean", "pct_total", "sum_pct_total", "min", "max", "quantile")`.
+#' Possible vales are `c("count", "sum", "mean", "pct_total", "sum_pct_total", "min", "max", "quantile", "wt_mean","sum_ratio")`.
 #' Count is the default.
 #' @param column For most statistics, the column of `data` to summarize.
 #' Not used for `"count"` or `"pct_total"` statistic.
+#' @param column2 Valid only when `statistic = "sum_ratio"`. 
+#' `column2` is a column of `data` such that `sum_ratio = sum(column)/sum(column2)` 
+#' @param weight Valid only when `statistic = "wt_mean"`. 
+#' Specifies the weight column of `data`.
 #' @param selection Expression to select a fixed subset of `data`. May be
 #' a logical vector or a one-sided formula that evaluates to a logical vector.
 #' If used, the `key` given to [crosstalk::SharedData] must be a fixed column (not row numbers).
@@ -69,8 +73,10 @@
 #'
 #' @export
 summaryValueBox <- function(data,
-                            statistic = c("count", "sum", "mean", "pct_total", "sum_pct_total", "min", "max", "quantile"),
+                            statistic = c("count", "sum", "mean", "pct_total", "sum_pct_total", "min", "max", "quantile", "wt_mean", "sum_ratio"),
                             column = NULL,
+                            column2 = NULL,
+                            weight = NULL,
                             selection = NULL,
                             locale = "navigator.language",
                             digits = 0,
@@ -118,6 +124,13 @@ summaryValueBox <- function(data,
   notation <- match.arg(notation)
   numerator <- NULL;
 
+  if (statistic == "sum_ratio" & is.null(column2)){
+    stop("column2 cannot be null when statistic = sum_ratio")
+  }
+
+  if (statistic == "wt_mean" & is.null(weight)){
+    stop("weight cannot be null when statistic = wt_mean")
+  }
 
   if (statistic %in% c("pct_total", "sum_pct_total")) {
     # If selection is given in the context of pct_total, apply selection to count rows in the numerator
@@ -164,16 +177,30 @@ summaryValueBox <- function(data,
     if (!statistic %in% c("count", "pct_total")) {
       stop("Column must be provided with ", statistic, " statistic.")
     }
-    data <- row.names(data)
+    data_ <- row.names(data)
   } else {
     if (!(column %in% colnames(data))) {
       stop("No ", column, " column in data.")
     }
-    data <- data[[column]]
+    data_ <- data[[column]]
 
     if (!is.null(numerator)){
       numerator <- numerator[[column]]
     }
+  }
+
+  if(!is.null(column2)){
+    if (!(column2 %in% colnames(data))) {
+      stop("No ", column2, " column in data.")
+    }
+    column2 <- data[[column2]]
+  }
+
+    if(!is.null(weight)){
+    if (!(weight %in% colnames(data))) {
+      stop("No ", weight, " column in data.")
+    }
+    weight <- data[[weight]]
   }
 
   color_contrast_w <- colorspace::contrast_ratio(color_thresholds$range, "white")
@@ -205,8 +232,10 @@ summaryValueBox <- function(data,
 
   # forward options using x
   x <- list(
-    data = data,
+    data = data_,
     numerator = get0("numerator"),
+    column2 = get0("column2"),
+    weight = get0("weight"),
     color_thresholds = color_thresholds,
     caption = get0("caption"),
     title = get0('accessible_title'),

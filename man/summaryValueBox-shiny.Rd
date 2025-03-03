@@ -6,7 +6,7 @@
 \alias{renderSummaryValueBox}
 \title{Shiny bindings for valueBox}
 \usage{
-summaryValueBoxOutput(outputId, width = "100\%", height = "160px")
+summaryValueBoxOutput(outputId, width = "100\%", height = "150px")
 
 renderSummaryValueBox(expr, env = parent.frame(), quoted = FALSE)
 }

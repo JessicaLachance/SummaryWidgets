@@ -71,15 +71,25 @@ average_mpg_vb <- summaryValueBox(
                           range = c("#6a0032","#036064"))
   ) #well formed unit https://tc39.es/ecma402/#sec-iswellformedunitidentifier
 
-
-pct_automatic2 <- summaryGauge(
+average_hp_cyl <- summaryValueBox(
   data = shared_mtcars,
-  statistic = "pct_total",
-  selection = ~am==0,
-  digits = 0, ## when digits == 0 0.1234 -> 12%
-  min = 0.33,
-  max = 0.66,
-  number_format = "percent",
+  statistic = "quantile",
+  column = "hp",
+  column2 = "cyl",
+  digits = 0,
+  caption = "horsepower per cylinder",
+  icon = "wrench",
+  color_thresholds = list(domain = c(-Inf),
+                          range = c("black","#036064"))
+  ) #well formed unit https://tc39.es/ecma402/#sec-iswellformedunitidentifier
+
+wt_hp_mean_am <- summaryGauge(
+  data = shared_mtcars,
+  statistic = "wt_mean",
+  column = "hp",
+  weight = "am",
+  min = 0,
+  max = max(mtcars$hp),
   height = "200px",
   color_thresholds = list(domain = c(-Inf),
                           range = c("black","gold")))
@@ -180,6 +190,20 @@ average_mpg_vb
 
 ```
 
+### Median Miles per Gallon
+
+#### Description
+
+This section highlights SummaryWidgets' capacity to present the ratio of the sum of two columns which fit the filter criteria, in this case the weighted average of horsepower per cylinder. This valuebox includes an icon, a caption, and a static background colour
+
+#### Valuebox
+
+```{r}
+
+average_hp_cyl
+
+```
+
 Row {data-height=450 .tabset}
 -----------------------------------------------------------------------
 
@@ -188,7 +212,7 @@ Row {data-height=450 .tabset}
 #### Description
 
 This section shows SummaryWidgets' capacity to present data in a guage visual. This tab shows two gauges:
-The first gauge is the percentage of cars with automatic transmission. The minimum value is set statically to be 0 (i.e. 0%), and the maximum value is set statically to be 1 (i.e. 100%).
+The first gauge is average horsepower of selected cars with automatic transmission. The minimum value is set statically to be the minimum value of the column hp in the mtcars dataset, and the maximum value is set statically to be the maximum value.
 
 The second gauge is the average quarter mile time in seconds for the selected card. The minimum value is set dynamically to be the minimum and maximum of the selected cars.
 
@@ -200,9 +224,9 @@ Note that putting two gauges in one card by wrapping them in `bslib::bscols()` d
 
 bscols(
   div(
-    h5("Percentage of selected cars which are automatic transmisison",
+    h5("Average horsepower of automatic transmisison",
        style="margin-left: 15px"),
-    pct_automatic2
+    wt_hp_mean_am
     ), 
   div(
     h5("Average quarter mile time (in seconds)",

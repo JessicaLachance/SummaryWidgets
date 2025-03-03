@@ -22,17 +22,6 @@ HTMLWidgets.widget({
     return {
       renderValue: function (x) {
 
-        // Filter array, returning a new array with only values in keys
-        var filterKeys = function (obj, keys) {
-          var result = [];
-          keys.forEach(function (k, i) {
-            if (obj.hasOwnProperty(k))
-              result[i] = obj[k];
-          });
-
-          return result;
-        };
-
         var targetPercent = function (min, max, value) {
           return (value - min) / (max - min);
         }
@@ -52,14 +41,14 @@ HTMLWidgets.widget({
               max = config.max ?? col_length + 1;
               break;
             case 'sum':
-              value = d3.sum(data, d => d) ?? "NA";
-              min = config.min ?? d3.min(data, d => d) * col_length;
-              max = config.max ?? d3.max(data, d => d) * col_length;
+              value = d3.sum(Object.values(data)) ?? "NA";
+              min = config.min ?? d3.min(Object.values(data)) * col_length;
+              max = config.max ?? d3.max(Object.values(data)) * col_length;
               break;
             case 'mean':
-              value = d3.mean(data, d => d) ?? "NA";
-              min = config.min ?? d3.min(data, d => d);
-              max = config.max ?? d3.max(data, d => d);
+              value = d3.mean(Object.values(data)) ?? "NA";
+              min = config.min ?? d3.min(Object.values(data));
+              max = config.max ?? d3.max(Object.values(data));
               break;
             case 'pct_total':
               let num_length = config.numerator.length;
@@ -68,27 +57,40 @@ HTMLWidgets.widget({
               max = config.max ?? 1;
               break;
             case 'sum_pct_total':
-              let num = d3.sum(config.numerator, d => d);
-              let denom = d3.sum(data, d => d);
+              let num = d3.sum(Object.values(config.numerator));
+              let denom = d3.sum(Object.values(data));
               value = num / denom ?? "NA";
               min = config.min ?? 0;
               max = config.max ?? 1;
               break;
             case 'min':
-              value = d3.min(data, d => d) ?? "NA";
+              value = d3.min(Object.values(data)) ?? "NA";
               min = config.min ?? 0;
               max = config.max ?? 1;
               break;
             case 'max':
-              value = d3.max(data, d => d) ?? "NA";
+              value = d3.max(Object.values(data)) ?? "NA";
               min = config.min ?? 0;
               max = config.max ?? 1;
               break;
             case 'quantile':
-              value = d3.quantile(data, config.settings.quantile, d => d) ?? "NA";
-              min = d3.quantile(data, 0, d => d) ?? 0;
-              max = d3.quantile(data, 1, d => d) ?? 1;
+              value = d3.quantile(Object.values(data), config.settings.quantile) ?? "NA";
+              min = d3.quantile(Object.values(data), 0) ?? 0;
+              max = d3.quantile(Object.values(data), 1) ?? 1;
               break;
+            case "sum_ratio":
+              let tp = d3.sum(Object.values(data));
+              let btm = d3.sum(Object.values(config.column2));
+              value = tp / btm ?? "NA";
+              min = config.min ?? 0;
+              max = config.max ?? 1;
+              break;
+            case "wt_mean":
+              let wt_sum = d3.sum(Object.keys(data).map(key => (data[key] ?? 0) * (config.weight[key] ?? 0)));
+              let wt = d3.sum(Object.values(config.weight), d =>d);
+              value = wt_sum/wt ?? "NA";
+              min = config.min ?? 0;
+              max = config.max ?? 1;
           }
 
           return [value, min, max];
@@ -421,6 +423,19 @@ HTMLWidgets.widget({
 
         } // end updateGauge
 
+        // Make a data object with keys so we can easily update the selection
+        var data = createKeyedObject(x.data, x.settings.crosstalk_key);
+        
+        // Generate other variables only if needed
+        var numerator = (["sum_pct_total","pct_total"].includes(x.settings.statistic)) ? 
+          createKeyedObject(x.numerator, x.settings.crosstalk_key) : null;
+
+        var column2 = (x.settings.statistic === "sum_ratio") ? 
+          createKeyedObject(x.column2, x.settings.crosstalk_key) : null;
+    
+        var weight = (x.settings.statistic === "wt_mean") ? 
+          createKeyedObject(x.weight, x.settings.crosstalk_key) : null;
+        
         var color_thresholds = x.color_thresholds;
         color_thresholds = convert_inf(color_thresholds);
 
@@ -450,7 +465,7 @@ HTMLWidgets.widget({
         gaugeConfig.settings.lang = gaugeConfig.settings.locale.split("-")[0].toLowerCase();
 
         if(x.title){
-          if(x.title.charAt(x.title.length-1) != "."){
+          if(x.title.charAt(x.title.length-1) !== "."){
             gaugeConfig.title = x.title.concat(".");
           } else {
             gaugeConfig.title = x.title;
@@ -473,7 +488,9 @@ HTMLWidgets.widget({
         gaugeConfig.colourScale;
         gaugeConfig.mainText;
         gaugeConfig.noteText;
-        gaugeConfig.numerator = x.numerator;
+        gaugeConfig.numerator = numerator;
+        gaugeConfig.column2 = column2;
+        gaugeConfig.weight = weight;
         gaugeConfig.min = x.min;
         gaugeConfig.max = x.max;
 
@@ -494,50 +511,25 @@ HTMLWidgets.widget({
             gaugeConfig.mainText = "black";
          }
 
-        // Make a data object with keys so we can easily update the selection
-        var data = {};
-        var i;
-        if (x.settings.crosstalk_key === null) {
-          for (i = 0; i < x.data.length; i++) {
-            data[i] = x.data[i];
-          }
-        } else {
-          for (i = 0; i < x.settings.crosstalk_key.length; i++) {
-            data[x.settings.crosstalk_key[i]] = x.data[i];
-          }
-        }
-
-        if (x.settings.statistic === "sum_pct_total") {
-          var numerator = {};
-          if (x.settings.crosstalk_key === null) {
-            for (i = 0; i < x.numerator.length; i++) {
-              numerator[i] = x.numerator[i];
-            }
-          } else {
-            for (i = 0; i < x.settings.crosstalk_key.length; i++) {
-              numerator[x.settings.crosstalk_key[i]] = x.numerator[i];
-            }
-          }
-        }
-
-        drawGauge(el.id, x.data, gaugeConfig);
+        drawGauge(el.id, data, gaugeConfig);
 
         // Set up to receive crosstalk filter and selection events
         let ct_filter = new crosstalk.FilterHandle();
         ct_filter.setGroup(x.settings.crosstalk_group);
         ct_filter.on("change", function (e) {
           if (e.value) {
-            if (x.settings.statistic === "pct_total") {
-              gaugeConfig.numerator = x.numerator.filter((v) => e.value.includes(v));
-            } else if (x.settings.statistic === "sum_pct_total") {
-              gaugeConfig.numerator = filterKeys(numerator, e.value)
-            }
+
+            gaugeConfig.numerator = numerator ? filterKeys(numerator, e.value) : null;
+            gaugeConfig.column2 = column2 ? filterKeys(column2, e.value) : null ;
+            gaugeConfig.weight = weight ? filterKeys(weight, e.value): null;
+
             updateGauge(el.id, filterKeys(data, e.value), gaugeConfig);
           } else {
-            gaugeConfig.numerator = x.numerator;
-            updateGauge(el.id, x.data, gaugeConfig);
+            gaugeConfig.numerator = numerator;
+            gaugeConfig.column2 = column2;
+            gaugeConfig.weight = weight;
+            updateGauge(el.id, data, gaugeConfig);
           }
-          toggleAriaHidden(`#${nodeID}`);
         });
 
         let ct_sel = new crosstalk.SelectionHandle();
@@ -545,17 +537,16 @@ HTMLWidgets.widget({
 
         ct_sel.on("change", function (e) {
           if (e.value) {
-            if (x.settings.statistic === "pct_total") {
-              gaugeConfig.numerator = x.numerator.filter((v) => e.value.includes(v));
-            } else if (x.settings.statistic === "sum_pct_total") {
-              gaugeConfig.numerator = filterKeys(numerator, e.value)
-            }
+            gaugeConfig.numerator = numerator ? filterKeys(numerator, e.value) : null;
+            gaugeConfig.column2 = column2 ? filterKeys(column2, e.value) : null ;
+            gaugeConfig.weight = weight ? filterKeys(weight, e.value): null;
             updateGauge(el.id, filterKeys(data, e.value), gaugeConfig);
           } else {
-            gaugeConfig.numerator = x.numerator;
-            updateGauge(el.id, x.data, gaugeConfig);
+            gaugeConfig.numerator = numerator;
+            gaugeConfig.column2 = column2;
+            gaugeConfig.weight = weight;
+            updateGauge(el.id, data, gaugeConfig);
           }
-          toggleAriaHidden(`#${nodeID}`);
         });
 
         window.matchMedia('(forced-colors: active)').addEventListener('change', event => {
@@ -576,7 +567,7 @@ HTMLWidgets.widget({
             gaugeConfig.noteText = "#777";
             gaugeConfig.mainText = "black";
          }
-        updateGauge(el.id, x.data, gaugeConfig);
+        updateGauge(el.id, data, gaugeConfig);
        });
       },
 

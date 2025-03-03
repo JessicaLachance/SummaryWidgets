@@ -19,17 +19,6 @@ HTMLWidgets.widget({
       return x;
     };
 
-    // Filter obj, returning a new obj containing only
-    // values with keys in keys.
-    var filterKeys = function (obj, keys) {
-      var result = {};
-      keys.forEach(function (k) {
-        if (obj.hasOwnProperty(k))
-          result[k] = obj[k];
-      });
-      return result;
-    };
-
     return {
       renderValue: function (x) {
 
@@ -163,20 +152,20 @@ HTMLWidgets.widget({
         }
 
         // Make a data object with keys so we can easily update the selection
-        var data = {};
-        var i;
-        if (x.settings.crosstalk_key === null) {
-          for (i = 0; i < x.data.length; i++) {
-            data[i] = x.data[i];
-          }
-        } else {
-          for (i = 0; i < x.settings.crosstalk_key.length; i++) {
-            data[x.settings.crosstalk_key[i]] = x.data[i];
-          }
-        }
+        var data = createKeyedObject(x.data, x.settings.crosstalk_key);
+        
+        // Generate other variables only if needed
+        var numerator = (["sum_pct_total","pct_total"].includes(x.settings.statistic)) ? 
+          createKeyedObject(x.numerator, x.settings.crosstalk_key) : null;
+
+        var column2 = (x.settings.statistic === "sum_ratio") ? 
+          createKeyedObject(x.column2, x.settings.crosstalk_key) : null;
+    
+        var weight = (x.settings.statistic === "wt_mean") ? 
+          createKeyedObject(x.weight, x.settings.crosstalk_key) : null;
 
         // Update the display to show the values in d
-        var update = function (d, n,callback) {
+        var update = function (d, n) {
 
           let [value, value_format] = calculateSingleValues(d, n, x)
 
@@ -236,9 +225,26 @@ HTMLWidgets.widget({
         ct_filter.setGroup(x.settings.crosstalk_group);
         ct_filter.on("change", function (e) {
           if (e.value) {
-            update(filterKeys(data, e.value), x.numerator);
+            if(["sum_pct_total","pct_total"].includes(x.settings.statistic)){
+              update(filterKeys(data, e.value), filterKeys(numerator,e.value));
+            }else if(x.settings.statistic === "sum_ratio"){
+              update(filterKeys(data, e.value), filterKeys(column2,e.value));
+            } else if(x.settings.statistic === "wt_mean"){
+              update(filterKeys(data, e.value), filterKeys(weight,e.value));
+            } else{
+              update(filterKeys(data, e.value));
+            }
+
           } else {
-            update(data, x.numerator);
+            if(["sum_pct_total","pct_total"].includes(x.settings.statistic)){
+              update(data, numerator);
+            }else if(x.settings.statistic === "sum_ratio"){
+              update(data, column2);
+            } else if(x.settings.statistic === "wt_mean"){
+              update(data, weight);
+            } else{
+              update(data);
+            }
           }
           toggleAriaHidden(`#${nodeID}`);
         });
@@ -247,9 +253,25 @@ HTMLWidgets.widget({
         ct_sel.setGroup(x.settings.crosstalk_group);
         ct_sel.on("change", function (e) {
           if (e.value && e.value.length) {
-            update(filterKeys(data, e.value), x.numerator,x.callback);
+            if(["sum_pct_total","pct_total"].includes(x.settings.statistic)){
+              update(filterKeys(data, e.value), filterKeys(numerator,e.value));
+            }else if(x.settings.statistic === "sum_ratio"){
+              update(filterKeys(data, e.value), filterKeys(column2,e.value));
+            } else if(x.settings.statistic === "wt_mean"){
+              update(filterKeys(data, e.value), filterKeys(weight,e.value));
+            } else{
+              update(filterKeys(data, e.value));
+            }
           } else {
-            update(data, x.numerator, x.callback);
+            if(["sum_pct_total","pct_total"].includes(x.settings.statistic)){
+              update(data, numerator);
+            }else if(x.settings.statistic === "sum_ratio"){
+              update(data, column2);
+            } else if(x.settings.statistic === "wt_mean"){
+              update(data, weight);
+            } else{
+              update(data);
+            }
           }
           toggleAriaHidden(`#${nodeID}`);
         });
@@ -284,10 +306,10 @@ HTMLWidgets.widget({
             .domain(color_thresholds.domain)
             .range(color_thresholds.icon_range);
          }
-          update(data,x.numerator);
+          update(data,numerator);
        });
 
-        update(data, x.numerator);
+        update(data, numerator);
       },
 
       resize: function (width, height) {
