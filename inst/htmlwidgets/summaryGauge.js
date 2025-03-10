@@ -88,7 +88,8 @@ HTMLWidgets.widget({
             case "wt_mean":
               let wt_sum = d3.sum(Object.keys(data).map(key => (data[key] ?? 0) * (config.weight[key] ?? 0)));
               let wt = d3.sum(Object.values(config.weight), d =>d);
-              value = wt_sum/wt ?? "NA";
+              value = (wt_sum === null || wt === null) ? "NA" : (wt_sum / wt);
+              value = (isNaN(value) || !isFinite(value)) ? "NA" : value;
               min = config.min ?? 0;
               max = config.max ?? 1;
           }
@@ -316,11 +317,11 @@ HTMLWidgets.widget({
 
           let gaugeData;
 
-          if (value !== "NA") {
+          if (value !== "NA" && !isNaN(value)) {
             let valuePct = targetPercent(min, max, value);
             valuePct = valuePct < 0 ? 0 : valuePct > 1 ? 1 : valuePct;
             let valueRadian = (valuePct * Math.PI) - (Math.PI / 2);
-
+          
             gaugeData = [
               { startAngle: -Math.PI / 2, endAngle: valueRadian, fill: config.colourScale(valuePct) },
               { startAngle: valueRadian, endAngle: Math.PI / 2, fill: "#EDEDED" },
@@ -331,6 +332,7 @@ HTMLWidgets.widget({
               { startAngle: -Math.PI / 2, endAngle: Math.PI / 2, fill: "#EDEDED" },
             ];
           }
+          
 
           let slices = svg.select(".slice-group").selectAll(".slices")
             .data(gaugeData)
