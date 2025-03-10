@@ -18,6 +18,13 @@ HTMLWidgets.widget({
     return {
       renderValue: function (x) {
 
+        x.data = Array.isArray(x.data) ? x.data : [x.data];
+        x.settings.crosstalk_key = variable === null ? 
+          null : 
+          (Array.isArray(x.settings.crosstalk_key) ? 
+            x.data : [x.settings.crosstalk_key]
+            );
+
         el.setAttribute('aria-live', 'off');
 
         x.settings.locale = (x.settings.locale === "navigator.language") ? navigator.language : x.settings.locale;
