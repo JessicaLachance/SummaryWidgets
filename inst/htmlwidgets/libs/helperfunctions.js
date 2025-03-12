@@ -18,8 +18,6 @@ var filterKeys = function (obj, keys) {
 };
 
 function createKeyedObject(dataArray, keyArray) {
-  console.log(dataArray);
-  console.log(keyArray);
   dataArray = Array.isArray(dataArray) ? dataArray : [dataArray];
   keyArray = Array.isArray(keyArray) ? keyArray : [keyArray];
   let obj = {};

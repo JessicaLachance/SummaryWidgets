@@ -26,6 +26,8 @@ HTMLWidgets.widget({
 
         // Update the display to show the values in d
         var update = function (d, n) {
+          console.log(d);
+          console.log(n);
           let [value, value_format] = calculateSingleValues(d, n, x);
           el.innerText = value_format;
         };
@@ -84,7 +86,15 @@ HTMLWidgets.widget({
           }
         });
 
-        update(data, numerator);
+        if(["sum_pct_total","pct_total"].includes(x.settings.statistic)){
+          update(data, numerator);
+        }else if(x.settings.statistic === "sum_ratio"){
+          update(data, column2);
+        } else if(x.settings.statistic === "wt_mean"){
+          update(data, weight);
+        } else{
+          update(data);
+        }
       },
 
       resize: function (width, height) {

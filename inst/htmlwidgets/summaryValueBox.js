@@ -309,7 +309,15 @@ HTMLWidgets.widget({
           update(data,numerator);
        });
 
+      if(["sum_pct_total","pct_total"].includes(x.settings.statistic)){
         update(data, numerator);
+      }else if(x.settings.statistic === "sum_ratio"){
+        update(data, column2);
+      } else if(x.settings.statistic === "wt_mean"){
+        update(data, weight);
+      } else{
+        update(data);
+      }
       },
 
       resize: function (width, height) {

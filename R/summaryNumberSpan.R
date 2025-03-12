@@ -72,7 +72,7 @@ summaryNumberSpan <- function(data,
   } else {
     # Not using Crosstalk
     warning("SummaryWidgets works best when data is an instance of crosstalk::SharedData.")
-    key <- NULL
+    key <- row.names(data)
     group <- NULL
   }
 
